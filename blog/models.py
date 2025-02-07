@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.text import slugify
+from tinymce.models import HTMLField
 from user.models import CustomUser
 
 
@@ -25,7 +26,7 @@ class Post(models.Model):
 
     title = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True, allow_unicode=True)
-    content = models.TextField()
+    content = HTMLField()
     status = models.CharField(
         max_length=10,
         choices=[("draft", "Draft"), ("published", "Published")],

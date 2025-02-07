@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Just Do Log - 당신의 생각을 기록하세요">
+    <meta name="theme-color" content="#4263EB">
+    <meta name="robots" content="index, follow">
+    <meta property="og:title" content="{% block og_title %}Just Do Log{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}당신의 생각을 기록하세요{% endblock %}">
+    <meta property="og:type" content="website">
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    
+    <title>{% block title %}Just Do Log{% endblock %}</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4263EB',
+                        'primary-hover': '#364FC7',
+                        secondary: '#495057',
+                        'gray-custom': '#868E96',
+                    },
+                    typography: {
+                        DEFAULT: {
+                            css: {
+                                maxWidth: 'none',
+                                color: '#495057',
+                                'h1, h2, h3, h4': {
+                                    color: '#495057 !important',
+                                    fontWeight: '700',
+                                    scrollMarginTop: '5rem',
+                                },
+                                h1: { 
+                                    fontSize: '1.75rem !important',  // 28px
+                                    marginTop: '2rem',
+                                    marginBottom: '1rem',
+                                },
+                                h2: { 
+                                    fontSize: '1.5rem !important',   // 24px
+                                    marginTop: '1.75rem',
+                                    marginBottom: '0.75rem',
+                                },
+                                h3: { 
+                                    fontSize: '1.25rem !important',  // 20px
+                                    marginTop: '1.5rem',
+                                    marginBottom: '0.75rem',
+                                    fontWeight: '600',
+                                },
+                                h4: { 
+                                    fontSize: '1.125rem !important', // 18px
+                                    marginTop: '1.25rem',
+                                    marginBottom: '0.5rem',
+                                    fontWeight: '600',
+                                },
+                                p: {
+                                    marginTop: '1rem',
+                                    marginBottom: '1rem',
+                                },
+                                a: {
+                                    color: '#4263EB !important',
+                                    textDecoration: 'none',
+                                    '&:hover': {
+                                        color: '#364FC7 !important',
+                                    },
+                                },
+                                strong: {
+                                    color: '#495057 !important',
+                                    fontWeight: '600',
+                                },
+                                blockquote: {
+                                    borderLeftWidth: '4px',
+                                    borderLeftColor: '#e9ecef',
+                                    backgroundColor: '#f8f9fa',
+                                    padding: '1rem',
+                                    color: '#495057 !important',
+                                    fontStyle: 'normal',
+                                    marginTop: '1.5rem',
+                                    marginBottom: '1.5rem',
+                                },
+                                code: {
+                                    color: '#495057 !important',
+                                    backgroundColor: '#f8f9fa',
+                                    padding: '0.2rem 0.4rem',
+                                    borderRadius: '0.25rem',
+                                    fontSize: '0.875em',
+                                },
+                                img: {
+                                    marginTop: '1.5rem',
+                                    marginBottom: '1.5rem',
+                                    borderRadius: '0.375rem',
+                                },
+                                ul: {
+                                    marginTop: '1rem',
+                                    marginBottom: '1rem',
+                                },
+                                ol: {
+                                    marginTop: '1rem',
+                                    marginBottom: '1rem',
+                                },
+                                li: {
+                                    marginTop: '0.5rem',
+                                    marginBottom: '0.5rem',
+                                },
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Utility Classes */
+        .btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background-color: #4263EB;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #364FC7;
+        }
+        .btn-secondary {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+        .btn-secondary:hover {
+            background-color: #e9ecef;
+        }
+        .btn-danger {
+            color: #e03131;
+        }
+        .btn-danger:hover {
+            background-color: #fff5f5;
+        }
+        .btn-mobile {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s;
+        }
+        .btn-mobile-primary {
+            background-color: #4263EB;
+            color: white;
+        }
+        .btn-mobile-primary:hover {
+            background-color: #364FC7;
+        }
+        .btn-mobile-secondary {
+            color: #495057;
+        }
+        .btn-mobile-secondary:hover {
+            background-color: #f8f9fa;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen flex flex-col bg-white antialiased">
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:p-4 focus:bg-white focus:text-primary focus:z-50">
+        메인 콘텐츠로 바로가기
+    </a>
+
+    <nav aria-label="메인 네비게이션" class="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-gray-100 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-14">
+                <div class="flex items-center">
+                    <a href="/" class="text-xl font-bold text-primary hover:text-primary/90 transition-colors" aria-label="홈으로 이동">
+                        Just Do Log
+                    </a>
+                </div>
+
+                <!-- 모바일 메뉴 토글 버튼 -->
+                <button type="button" 
+                        class="lg:hidden flex items-center px-3 text-gray-500 hover:text-gray-600"
+                        aria-label="메뉴 열기"
+                        aria-expanded="false"
+                        aria-controls="mobile-menu">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+
+                <!-- 데스크톱 메뉴 -->
+                <div class="hidden lg:flex items-center space-x-4">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'user_post_create' username=user.username %}" 
+                           class="btn btn-secondary">
+                            새 글 작성
+                        </a>
+                        <a href="{% url 'user_blog_main' username=user.username %}" 
+                           class="btn btn-secondary">
+                            내 블로그
+                        </a>
+                        <div class="w-px h-4 bg-gray-200" role="separator"></div>
+                        <a href="{% url 'account_logout' %}" 
+                           class="btn btn-secondary">
+                            로그아웃
+                        </a>
+                    {% else %}
+                        <a href="{% url 'account_login' %}" 
+                           class="btn btn-secondary">
+                            로그인
+                        </a>
+                        <a href="{% url 'account_signup' %}" 
+                           class="btn btn-primary">
+                            회원가입
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- 모바일 메뉴 -->
+        <div class="lg:hidden hidden" id="mobile-menu">
+            <div class="px-2 pt-2 pb-3 space-y-1 bg-white border-b border-gray-100">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'user_post_create' username=user.username %}" 
+                       class="btn-mobile btn-mobile-secondary">
+                        새 글 작성
+                    </a>
+                    <a href="{% url 'user_blog_main' username=user.username %}" 
+                       class="btn-mobile btn-mobile-secondary">
+                        내 블로그
+                    </a>
+                    <a href="{% url 'account_logout' %}" 
+                       class="btn-mobile btn-mobile-secondary">
+                        로그아웃
+                    </a>
+                {% else %}
+                    <a href="{% url 'account_login' %}" 
+                       class="btn-mobile btn-mobile-secondary">
+                        로그인
+                    </a>
+                    <a href="{% url 'account_signup' %}" 
+                       class="btn-mobile btn-mobile-primary">
+                        회원가입
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main id="main-content" class="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="mt-auto py-8 border-t border-gray-100" role="contentinfo">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-custom text-sm">
+            <p>&copy; {% now "Y" %} Just Do Log. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // 모바일 메뉴 토글 기능
+        const menuButton = document.querySelector('[aria-controls="mobile-menu"]');
+        const mobileMenu = document.getElementById('mobile-menu');
+        
+        if (menuButton && mobileMenu) {
+            menuButton.addEventListener('click', () => {
+                const expanded = menuButton.getAttribute('aria-expanded') === 'true';
+                menuButton.setAttribute('aria-expanded', !expanded);
+                mobileMenu.classList.toggle('hidden');
+            });
+        }
+    </script>
+</body>
+</html> 

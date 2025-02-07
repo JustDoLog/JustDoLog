@@ -1,14 +1,62 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1>Hello, {{ user.username }}</h1>
-    <h2>Your Blog: {{ blog.title }}</h2>
-    <h3>Post: {{ post.title }}</h3>
-    <p>{{ post.content }}</p>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}{{ post.title }} - {{ post.blog.title }}{% endblock %}
+{% block og_title %}{{ post.title }}{% endblock %}
+{% block og_description %}{{ post.content|striptags|truncatechars:150 }}{% endblock %}
+
+{% block content %}
+<article class="pb-16">
+    <!-- Post Header -->
+    <header class="mb-8">
+        <h1 class="text-4xl font-bold text-secondary mb-4">{{ post.title }}</h1>
+        <div class="flex flex-wrap items-center gap-3 text-gray-custom">
+            <span class="font-medium text-secondary">
+                {{ post.author.nickname|default:post.author.username }}
+            </span>
+            <div class="w-px h-4 bg-gray-200"></div>
+            <time datetime="{{ post.created_at|date:'Y-m-d' }}">
+                {{ post.created_at|date:"Y년 n월 j일" }}
+            </time>
+            {% if post.status == 'draft' %}
+                <span class="px-2 py-0.5 bg-yellow-50 text-yellow-600 text-sm rounded-full border border-yellow-200">
+                    임시저장
+                </span>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Post Content -->
+    <div class="prose prose-slate lg:prose-lg max-w-none">
+        {{ post.content|safe }}
+    </div>
+
+    <!-- Post Footer -->
+    {% if user == post.author %}
+    <div class="flex justify-end mt-8 space-x-3">
+        <a href="{% url 'user_post_update' username=post.author.username slug=post.slug %}" 
+           class="btn btn-secondary">
+            수정
+        </a>
+        <form id="deleteForm" 
+              method="post" 
+              action="{% url 'user_post_delete' username=post.author.username slug=post.slug %}" 
+              class="inline">
+            {% csrf_token %}
+            <button type="button" 
+                    onclick="confirmDelete()" 
+                    class="btn btn-danger">
+                삭제
+            </button>
+        </form>
+    </div>
+    {% endif %}
+</article>
+
+<script>
+function confirmDelete() {
+    if (confirm('정말로 이 글을 삭제하시겠습니까?')) {
+        document.getElementById('deleteForm').submit();
+    }
+}
+</script>
+{% endblock %}

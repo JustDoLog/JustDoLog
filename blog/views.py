@@ -34,6 +34,11 @@ class UserBlogMainView(DetailView):
         user = get_object_or_404(CustomUser, username=self.kwargs["username"])
         return get_object_or_404(Blog, owner=user)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["posts"] = context["blog"].posts.order_by("-created_at")
+        return context
+
 
 class UserPostDetailView(PostGetObjectMixin, DetailView):
     model = Post
@@ -43,7 +48,7 @@ class UserPostDetailView(PostGetObjectMixin, DetailView):
 
 class UserPostCreateView(LoginRequiredMixin, BlogOwnerRequiredMixin, CreateView):
     model = Post
-    template_name = "blog/user_post_create.html"
+    template_name = "blog/user_post_form.html"
     fields = ["title", "content", "status"]
 
     def form_valid(self, form):
@@ -62,7 +67,7 @@ class UserPostUpdateView(
     LoginRequiredMixin, BlogOwnerRequiredMixin, PostGetObjectMixin, UpdateView
 ):
     model = Post
-    template_name = "blog/user_post_update.html"
+    template_name = "blog/user_post_form.html"
     fields = ["title", "content", "status"]
 
     def get_success_url(self):

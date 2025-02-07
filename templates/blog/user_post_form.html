@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if form.instance.pk %}글 수정{% else %}새 글 작성{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white shadow-sm rounded-lg p-6">
+    <h1 class="text-2xl font-bold text-secondary mb-6">
+        {% if form.instance.pk %}글 수정{% else %}새 글 작성{% endif %}
+    </h1>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Title Field -->
+        <div class="space-y-1">
+            <label for="{{ form.title.id_for_label }}" 
+                   class="block text-sm font-medium text-secondary">
+                제목
+            </label>
+            {% if form.title.errors %}
+                <div class="text-sm text-red-600">
+                    {{ form.title.errors }}
+                </div>
+            {% endif %}
+            <input type="text" 
+                   name="{{ form.title.name }}" 
+                   id="{{ form.title.id_for_label }}"
+                   value="{{ form.title.value|default:'' }}"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+                   placeholder="제목을 입력하세요">
+        </div>
+
+        <!-- Content Field -->
+        <div class="space-y-1">
+            <label for="{{ form.content.id_for_label }}" 
+                   class="block text-sm font-medium text-secondary">
+                내용
+            </label>
+            {% if form.content.errors %}
+                <div class="text-sm text-red-600">
+                    {{ form.content.errors }}
+                </div>
+            {% endif %}
+            {{ form.content }}
+        </div>
+
+        <!-- Status Field -->
+        <div class="space-y-1">
+            <label for="{{ form.status.id_for_label }}" 
+                   class="block text-sm font-medium text-secondary">
+                상태
+            </label>
+            {% if form.status.errors %}
+                <div class="text-sm text-red-600">
+                    {{ form.status.errors }}
+                </div>
+            {% endif %}
+            <select name="{{ form.status.name }}" 
+                    id="{{ form.status.id_for_label }}"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors">
+                {% for value, label in form.status.field.choices %}
+                    <option value="{{ value }}" {% if form.status.value == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="flex justify-end space-x-3 pt-4">
+            <a href="{% if form.instance.pk %}{% url 'user_post_detail' username=user.username slug=form.instance.slug %}{% else %}{% url 'user_blog_main' username=user.username %}{% endif %}"
+               class="btn btn-secondary">
+                취소
+            </a>
+            <button type="submit" class="btn btn-primary">
+                {% if form.instance.pk %}수정{% else %}작성{% endif %}
+            </button>
+        </div>
+    </form>
+</div>
+
+{{ form.media }}
+{% endblock %} 

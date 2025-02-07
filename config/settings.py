@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "allauth.socialaccount.providers.github",
+    "tinymce",
     "user",
     "blog",
 ]
@@ -163,3 +164,51 @@ SITE_ID = 1
 ACCOUNT_EMAIL_REQUIRED = True  # 계정 이메일이 필요한가?
 ACCOUNT_USERNAME_REQUIRED = True  # 계정 이름이 필요한가?
 ACCOUNT_EMAIL_VERIFICATION = "none"  # 이메일 검증 과정이 필요한가?
+
+# tinymce
+TINYMCE_DEFAULT_CONFIG = {
+    "height": "500px",
+    "width": "100%",
+    "menubar": False,
+    "plugins": "link image code",
+    "toolbar": "h1 h2 h3 h4 | bold italic strikethrough | blockquote link image | code",
+    "toolbar_mode": "wrap",
+    "language": "ko_KR",
+    "content_style": """
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+        body { 
+            font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #212529;
+        }
+        h1, h2, h3, h4 { 
+            font-weight: 700;
+            color: #212529;
+            margin: 1.5em 0 0.5em;
+        }
+        h1 { font-size: 2.5em; }
+        h2 { font-size: 2em; }
+        h3 { font-size: 1.75em; }
+        h4 { font-size: 1.5em; }
+        p { margin: 1em 0; }
+        blockquote { 
+            border-left: 4px solid #e9ecef; 
+            margin: 1.5em 0; 
+            padding: 0.5em 1em; 
+            color: #495057;
+            background-color: #f8f9fa;
+        }
+        code {
+            background-color: #f8f9fa;
+            border-radius: 3px;
+            padding: 0.2em 0.4em;
+            font-family: monospace;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            margin: 1em 0;
+        }
+    """,
+}
