@@ -1,0 +1,33 @@
+{% extends "discovery/base_post_list.html" %}
+
+{% block page_title %}
+    {% if query %}
+        "{{ query }}" 검색 결과
+    {% else %}
+        검색
+    {% endif %}
+{% endblock %}
+
+{% block filters %}
+<div class="max-w-2xl mx-auto mb-12">
+    <form method="get" action="{% url 'search' %}" class="flex gap-2">
+        <input type="text" 
+               name="q" 
+               value="{{ query }}" 
+               placeholder="검색어를 입력하세요" 
+               class="flex-1 px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <button type="submit" 
+                class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors duration-200">
+            검색
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block empty_message %}
+    {% if query %}
+        "{{ query }}"에 대한 검색 결과가 없습니다.
+    {% else %}
+        검색어를 입력해주세요.
+    {% endif %}
+{% endblock %}

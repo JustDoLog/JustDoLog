@@ -85,7 +85,12 @@ docker-compose -f docker-compose.dev.yml exec web python manage.py createsuperus
 이제 http://localhost:8000 에서 개발 서버에 접속할 수 있습니다. 관리자 페이지는 http://localhost:8000/admin/ 에서 확인할 수 있습니다.
 
 ### 개발 환경 유용한 명령어들
+
+#### Docker 관련 명령어
 ```bash
+# 서버 시작
+docker-compose -f docker-compose.dev.yml up --build -d
+
 # 서버 로그 확인
 docker-compose -f docker-compose.dev.yml logs -f
 
@@ -106,6 +111,55 @@ docker-compose -f docker-compose.dev.yml down -v
 
 # 컨테이너, 이미지, 볼륨 모두 제거 (초기화)
 docker-compose -f docker-compose.dev.yml down -v --rmi all
+```
+
+#### Django 관리 명령어
+```bash
+# 데이터베이스 마이그레이션
+python manage.py makemigrations  # 모델 변경사항 마이그레이션 파일 생성
+python manage.py migrate         # 마이그레이션 적용
+
+# 테스트 데이터 생성
+python manage.py generate_test_data  # 테스트용 데이터 생성
+python manage.py generate_test_data --users 10 --posts 5  # 10명의 사용자, 각 5개의 포스트 생성
+
+# 정적 파일 수집
+python manage.py collectstatic  # 정적 파일 수집
+
+# 개발 서버 실행
+python manage.py runserver  # 기본 포트(8000)로 실행
+python manage.py runserver 8080  # 특정 포트로 실행
+python manage.py runserver 0.0.0.0:8000  # 모든 IP에서 접근 가능하도록 실행
+
+# Django 쉘
+python manage.py shell  # Django 쉘 실행 (일반)
+python manage.py shell_plus  # Django 확장 쉘 실행 (django-extensions 필요)
+
+# 데이터베이스 백업 및 복원
+python manage.py dumpdata > db.json  # 전체 데이터 백업
+python manage.py dumpdata blog > blog.json  # 특정 앱의 데이터만 백업
+python manage.py loaddata db.json  # 데이터 복원
+
+# 캐시 삭제
+python manage.py clear_cache  # 캐시 삭제
+
+# 테스트
+python manage.py test  # 전체 테스트 실행
+python manage.py test blog  # 특정 앱의 테스트만 실행
+python manage.py test blog.tests.test_views  # 특정 테스트 파일만 실행
+python manage.py test blog.tests.test_views -k test_create_post  # 특정 테스트 케이스만 실행
+```
+
+#### 코드 품질 관리
+```bash
+# 코드 포맷팅
+black .  # 코드 스타일 자동 수정
+
+# 코드 린팅
+flake8 .  # 코드 품질 검사
+
+# Import 문 정렬
+isort .  # 파이썬 import 문 자동 정렬
 ```
 
 ### 프로덕션 환경 설정

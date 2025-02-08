@@ -42,8 +42,19 @@ class Post(models.Model):
     # FTS를 위한 필드
     search_vector = SearchVectorField(null=True)
 
+    # 좋아요한 사용자들
+    liked_by = models.ManyToManyField(
+        CustomUser, through="PostLike", related_name="liked_posts"
+    )
+
+    # 읽은 사용자들
+    read_by = models.ManyToManyField(
+        CustomUser, through="PostRead", related_name="read_posts"
+    )
+
     class Meta:
         indexes = [GinIndex(fields=["search_vector"], name="post_search_vector_idx")]
+        ordering = ["-created_at"]
 
     def __str__(self):
         return self.title
@@ -64,3 +75,24 @@ class Post(models.Model):
                 count += 1
             self.slug = unique_slug
         super().save(*args, **kwargs)
+
+
+class PostLike(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "post")
+        ordering = ["-created_at"]
+
+
+class PostRead(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("user", "post")
+        ordering = ["-updated_at"]
