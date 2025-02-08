@@ -2,6 +2,11 @@ from django.views.generic import DetailView, CreateView, UpdateView, DeleteView
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse, reverse_lazy
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+import uuid
+from datetime import datetime
 from .models import Blog, Post
 from user.models import CustomUser
 
@@ -87,3 +92,41 @@ class UserPostDeleteView(
         return reverse(
             "user_blog_main", kwargs={"username": self.request.user.username}
         )
+
+
+@csrf_exempt
+@login_required
+def upload_image(request, username):
+    # 권한 체크: 현재 사용자가 해당 블로그의 소유자인지 확인
+    if request.user.username != username:
+        return JsonResponse({"error": "Permission denied"}, status=403)
+
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    if "file" not in request.FILES:
+        return JsonResponse({"error": "No file uploaded"}, status=400)
+
+    file = request.FILES["file"]
+    if not file.content_type.startswith("image/"):
+        return JsonResponse({"error": "File type not supported"}, status=400)
+
+    # 파일 이름 생성 (UUID + 원본 확장자)
+    ext = file.name.split(".")[-1]
+    filename = f"{uuid.uuid4()}.{ext}"
+
+    # 연/월 기반 폴더 구조 (blog/posts/images/YYYY/MM/)
+    today = datetime.now()
+    filepath = f"blog/posts/images/{today.year}/{today.month:02d}/{filename}"
+
+    try:
+        from django.core.files.storage import default_storage
+        from django.core.files.base import ContentFile
+
+        # MinIO에 파일 저장
+        filepath = default_storage.save(filepath, ContentFile(file.read()))
+        file_url = default_storage.url(filepath)
+
+        return JsonResponse({"location": file_url})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)

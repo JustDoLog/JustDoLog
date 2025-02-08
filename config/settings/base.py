@@ -165,11 +165,51 @@ ACCOUNT_EMAIL_VERIFICATION = "none"  # 이메일 검증 과정이 필요한가?
 TINYMCE_DEFAULT_CONFIG = {
     "height": "500px",
     "width": "100%",
-    "menubar": False,
-    "plugins": "link image code",
-    "toolbar": "h1 h2 h3 h4 | bold italic strikethrough | blockquote link image | code",
-    "toolbar_mode": "wrap",
+    "menubar": "file edit view insert format tools table help",
+    "plugins": (
+        "advlist autolink lists link image imagetools charmap print preview anchor searchreplace "
+        "visualblocks code fullscreen insertdatetime media table paste code help wordcount spellchecker "
+        "file quickbars emoticons"
+    ),
+    "toolbar": (
+        "undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | "
+        "alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist checklist | "
+        "forecolor backcolor casechange permanentpen formatpainter removeformat | pagebreak | "
+        "charmap emoticons | fullscreen  preview save print | insertfile image media pageembed template "
+        "link anchor codesample | a11ycheck ltr rtl | showcomments addcomment code"
+    ),
+    "custom_undo_redo_levels": 10,
     "language": "ko_KR",
+    # 이미지 업로드 관련 설정
+    "images_upload_url": "upload_image",
+    "automatic_uploads": True,
+    "images_reuse_filename": True,
+    "file_picker_types": "image",
+    "images_file_types": "jpg,svg,webp,png,gif",
+    "image_advtab": True,
+    "image_uploadtab": True,
+    "file_picker_callback": """
+        function(callback, value, meta) {
+            var input = document.createElement('input');
+            input.setAttribute('type', 'file');
+            input.setAttribute('accept', 'image/*');
+            input.onchange = function() {
+                var file = this.files[0];
+                var reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = function() {
+                    var id = 'blobid' + (new Date()).getTime();
+                    var blobCache = tinymce.activeEditor.editorUpload.blobCache;
+                    var base64 = reader.result.split(',')[1];
+                    var blobInfo = blobCache.create(id, file, base64);
+                    blobCache.add(blobInfo);
+                    callback(blobInfo.blobUri(), { title: file.name });
+                };
+            };
+            input.click();
+        }
+    """,
+    # 기존 스타일 설정 유지
     "content_style": """
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
         body { 

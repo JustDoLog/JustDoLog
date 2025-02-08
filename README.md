@@ -10,9 +10,13 @@ JustDoLog는 개발자들을 위한 심플하고 강력한 블로깅 플랫폼�
   - [시작하기](#시작하기)
     - [사전 요구사항](#사전-요구사항)
     - [개발 환경 설정](#개발-환경-설정)
+    - [개발 환경 유용한 명령어들](#개발-환경-유용한-명령어들)
     - [프로덕션 환경 설정](#프로덕션-환경-설정)
   - [환경 변수](#환경-변수)
   - [데이터베이스](#데이터베이스)
+  - [파일 스토리지 (MinIO)](#파일-스토리지-minio)
+    - [MinIO 설정](#minio-설정)
+    - [버킷 설정](#버킷-설정)
   - [Docker 사용하기](#docker-사용하기)
     - [개발 환경](#개발-환경)
     - [프로덕션 환경](#프로덕션-환경)
@@ -36,6 +40,8 @@ JustDoLog는 개발자들을 위한 심플하고 강력한 블로깅 플랫폼�
 - **Database**
   - PostgreSQL 15 (프로덕션)
   - SQLite (개발)
+- **Storage**
+  - MinIO (S3 호환 객체 스토리지)
 - **Infrastructure**
   - Docker & Docker Compose
   - Nginx (프로덕션)
@@ -57,26 +63,50 @@ cd JustDoLog
 
 2. 환경 변수 설정
 ```bash
-cp env.example .env.dev
+cp env.dev.example .env.dev
 # .env.dev 파일을 적절히 수정하세요
 ```
 
-3. 개발 서버 실행
+3. 개발 서버 실행 (백그라운드)
 ```bash
-docker-compose up --build
+docker-compose -f docker-compose.dev.yml up --build -d
 ```
 
 4. 데이터베이스 마이그레이션
 ```bash
-docker-compose exec web python manage.py migrate
+docker-compose -f docker-compose.dev.yml exec web python manage.py migrate
 ```
 
 5. 관리자 계정 생성
 ```bash
-docker-compose exec web python manage.py createsuperuser
+docker-compose -f docker-compose.dev.yml exec web python manage.py createsuperuser
 ```
 
 이제 http://localhost:8000 에서 개발 서버에 접속할 수 있습니다. 관리자 페이지는 http://localhost:8000/admin/ 에서 확인할 수 있습니다.
+
+### 개발 환경 유용한 명령어들
+```bash
+# 서버 로그 확인
+docker-compose -f docker-compose.dev.yml logs -f
+
+# 특정 컨테이너 로그만 확인
+docker-compose -f docker-compose.dev.yml logs -f web
+
+# Django 관리 명령어 실행
+docker-compose -f docker-compose.dev.yml exec web python manage.py [command]
+
+# 서버 재시작
+docker-compose -f docker-compose.dev.yml restart
+
+# 서버 중지
+docker-compose -f docker-compose.dev.yml down
+
+# 서버 중지 및 볼륨 삭제 (데이터베이스 초기화)
+docker-compose -f docker-compose.dev.yml down -v
+
+# 컨테이너, 이미지, 볼륨 모두 제거 (초기화)
+docker-compose -f docker-compose.dev.yml down -v --rmi all
+```
 
 ### 프로덕션 환경 설정
 1. 환경 변수 설정
@@ -114,6 +144,10 @@ docker-compose -f docker-compose.prod.yml exec web python manage.py collectstati
 | DB_PASSWORD | 데이터베이스 비밀번호 | - | Yes |
 | DB_HOST | 데이터베이스 호스트 | db | Yes |
 | DB_PORT | 데이터베이스 포트 | 5432 | Yes |
+| MINIO_ROOT_USER | MinIO 접근 키 | justdolog_minio | Yes |
+| MINIO_ROOT_PASSWORD | MinIO 시크릿 키 | - | Yes |
+| MINIO_BUCKET_NAME | MinIO 버킷 이름 | justdolog-media | Yes |
+| MINIO_URL | MinIO 엔드포인트 URL | http://localhost:9000 | Yes |
 
 ## 데이터베이스
 - 개발 환경: SQLite
@@ -122,6 +156,30 @@ docker-compose -f docker-compose.prod.yml exec web python manage.py collectstati
     - pg_trgm
     - unaccent
   - 자동 검색 벡터 업데이트를 위한 트리거 설정
+
+## 파일 스토리지 (MinIO)
+프로젝트는 이미지 및 파일 저장을 위해 MinIO를 사용합니다.
+
+### MinIO 설정
+1. MinIO 서버 실행 (개발 환경)
+```bash
+# docker-compose.dev.yml에 포함되어 있어 별도 실행 불필요
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+2. MinIO 서버 실행 (프로덕션 환경)
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+3. MinIO 콘솔 접속
+- 개발 환경: http://localhost:9001 (기본 계정: justdolog_minio / .env.dev 파일의 MINIO_ROOT_PASSWORD)
+- 프로덕션 환경: https://your-domain:9001
+
+### 버킷 설정
+1. MinIO 콘솔에 접속
+2. 'Create Bucket' 버튼을 클릭하여 새 버킷 생성 (기본값: justdolog-media)
+3. 버킷의 Access Policy를 'public'으로 설정
 
 ## Docker 사용하기
 

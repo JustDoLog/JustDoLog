@@ -16,6 +16,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      minio:
+        condition: service_healthy
     networks:
       - justdolog_net
 
@@ -54,6 +56,30 @@ services:
     networks:
       - justdolog_net
 
+  minio:
+    image: minio/minio:latest
+    volumes:
+      - minio_data:/data
+    env_file:
+      - .env
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ADDRESS: ":9000"
+      MINIO_CONSOLE_ADDRESS: ":9001"
+      MINIO_DOMAIN: "localhost"
+    command: server --address ":9000" --console-address ":9001" /data
+    ports:
+      - "9000:9000"  # API
+      - "9001:9001"  # Console
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - justdolog_net
+
 networks:
   justdolog_net:
     driver: bridge
@@ -61,4 +87,5 @@ networks:
 volumes:
   postgres_data:
   static_volume:
-  media_volume: 
+  media_volume:
+  minio_data: 

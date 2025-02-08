@@ -1,5 +1,13 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+import uuid
+
+
+def profile_image_path(instance, filename):
+    """프로필 이미지 업로드 경로 생성"""
+    ext = filename.split(".")[-1]
+    filename = f"{uuid.uuid4()}.{ext}"
+    return f"user/profiles/images/{filename}"
 
 
 class CustomUser(AbstractUser):
@@ -13,7 +21,10 @@ class CustomUser(AbstractUser):
     # date_joined = models.DateTimeField(default=timezone.now)
 
     profile_image = models.ImageField(
-        upload_to="profile_images/", null=True, blank=True
+        upload_to=profile_image_path,
+        null=True,
+        blank=True,
+        verbose_name="프로필 이미지",
     )
     nickname = models.CharField(max_length=100, blank=True)
     bio = models.CharField(max_length=255, blank=True)
@@ -23,6 +34,10 @@ class CustomUser(AbstractUser):
     homepage = models.URLField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "사용자"
+        verbose_name_plural = "사용자들"
 
     def __str__(self):
         return self.username

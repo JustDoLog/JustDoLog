@@ -3,6 +3,11 @@ from django.views.generic import RedirectView
 from . import views
 
 urlpatterns = [
+    path(
+        "@<str:username>/posts/new/upload_image",
+        views.upload_image,
+        name="upload_image",
+    ),
     path("@<str:username>/", RedirectView.as_view(pattern_name="user_blog_main")),
     path(
         "@<str:username>/posts/",
