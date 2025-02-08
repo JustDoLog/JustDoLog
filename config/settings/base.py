@@ -161,6 +161,8 @@ SITE_ID = 1
 ACCOUNT_EMAIL_REQUIRED = True  # 계정 이메일이 필요한가?
 ACCOUNT_USERNAME_REQUIRED = True  # 계정 이름이 필요한가?
 ACCOUNT_EMAIL_VERIFICATION = "none"  # 이메일 검증 과정이 필요한가?
+LOGIN_REDIRECT_URL = "/"
+LOGOUT_REDIRECT_URL = "/"
 
 # tinymce
 TINYMCE_DEFAULT_CONFIG = {
