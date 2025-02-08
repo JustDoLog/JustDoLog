@@ -129,6 +129,7 @@ celerybeat.pid
 
 # Environments
 .env
+.env.dev
 .venv
 env/
 venv/
@@ -169,3 +170,13 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Docker
+.docker/
+docker-compose.override.yml
+
+# Project specific
+static/
+staticfiles/
+media/
+postgres_data/

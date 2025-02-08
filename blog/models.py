@@ -2,6 +2,8 @@ from django.db import models
 from django.utils.text import slugify
 from tinymce.models import HTMLField
 from user.models import CustomUser
+from django.contrib.postgres.search import SearchVectorField
+from django.contrib.postgres.indexes import GinIndex
 
 
 class Blog(models.Model):
@@ -36,6 +38,12 @@ class Post(models.Model):
     views = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # FTS를 위한 필드
+    search_vector = SearchVectorField(null=True)
+
+    class Meta:
+        indexes = [GinIndex(fields=["search_vector"], name="post_search_vector_idx")]
 
     def __str__(self):
         return self.title

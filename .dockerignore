@@ -1,0 +1,56 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+.docker
+docker-compose*
+Dockerfile*
+.dockerignore
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__
+.Python
+*.py[cod]
+*$py.class
+.env*
+.venv
+env/
+venv/
+ENV/
+
+# Development/IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# Project specific
+staticfiles/
+media/
+postgres_data/
+*.sqlite3
+
+# Documentation
+README.md
+LICENSE
+*.md
+
+# Tests
+tests/
+test/
+htmlcov/
+.coverage
+.pytest_cache/
+
+# Logs
+*.log
+
+# Local development
+.DS_Store
+node_modules/ 
