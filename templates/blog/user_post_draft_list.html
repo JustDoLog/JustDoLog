@@ -36,7 +36,7 @@
                     </div>
                     {% if post.content %}
                     <p class="mt-2 text-gray-600 text-sm line-clamp-2">
-                        {{ post.content|striptags|truncatewords:30 }}
+                        {{ post.content|striptags|safe|truncatewords:30 }}
                     </p>
                     {% endif %}
                 </div>

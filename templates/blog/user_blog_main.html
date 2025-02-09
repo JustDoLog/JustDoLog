@@ -63,7 +63,7 @@
                     
                     <!-- 내용 미리보기 -->
                     <p class="text-gray-600 text-base mb-3 line-clamp-2 leading-[1.6]">
-                        {{ post.content|striptags|truncatewords:30 }}
+                        {{ post.content|striptags|safe|truncatewords:30 }}
                     </p>
 
                     <!-- 하단 메타 정보 -->
@@ -96,8 +96,8 @@
                 {% if post.thumbnail %}
                 <a href="{% url 'user_post_detail' username=post.blog.owner.username slug=post.slug %}" 
                    class="block flex-shrink-0 w-[200px] h-[134px] rounded-lg overflow-hidden">
-                    <img src="{{ post.thumbnail.url }}" 
-                         alt="" 
+                    <img src="{{ post.thumbnail }}" 
+                         alt="{{ post.title }}"
                          class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
                 </a>
                 {% endif %}

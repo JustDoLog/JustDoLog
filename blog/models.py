@@ -4,6 +4,7 @@ from tinymce.models import HTMLField
 from user.models import CustomUser
 from django.contrib.postgres.search import SearchVectorField
 from django.contrib.postgres.indexes import GinIndex
+from bs4 import BeautifulSoup
 
 
 class Blog(models.Model):
@@ -29,6 +30,7 @@ class Post(models.Model):
     title = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True, allow_unicode=True)
     content = HTMLField()
+    thumbnail = models.URLField(max_length=500, blank=True, null=True)
     status = models.CharField(
         max_length=10,
         choices=[("draft", "Draft"), ("published", "Published")],
@@ -74,6 +76,13 @@ class Post(models.Model):
                 unique_slug = f"{base_slug}-{count}"
                 count += 1
             self.slug = unique_slug
+
+        # content의 첫 번째 이미지를 썸네일로 사용
+        if self.content:
+            soup = BeautifulSoup(self.content, 'html.parser')
+            img = soup.find('img')
+            self.thumbnail = img['src'] if img and img.get('src') else None
+
         super().save(*args, **kwargs)
 
 
