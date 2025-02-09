@@ -5,6 +5,9 @@ from user.models import CustomUser
 from django.contrib.postgres.search import SearchVectorField
 from django.contrib.postgres.indexes import GinIndex
 from bs4 import BeautifulSoup
+from taggit.managers import TaggableManager
+from django.db.models import Count
+from taggit.models import Tag
 
 
 class Blog(models.Model):
@@ -19,6 +22,15 @@ class Blog(models.Model):
 
     def __str__(self):
         return self.title
+
+    def get_tags_with_count(self):
+        # 해당 블로그의 공개된 게시글에 사용된 태그와 게시글 수를 가져옴
+        return Tag.objects.filter(
+            post__blog=self,
+            post__status='published'
+        ).annotate(
+            posts_count=Count('post', filter=models.Q(post__status='published'))
+        ).order_by('-posts_count', 'name')
 
 
 class Post(models.Model):
@@ -53,6 +65,9 @@ class Post(models.Model):
     read_by = models.ManyToManyField(
         CustomUser, through="PostRead", related_name="read_posts"
     )
+
+    # 태그 관리자
+    tags = TaggableManager(blank=True)
 
     class Meta:
         indexes = [GinIndex(fields=["search_vector"], name="post_search_vector_idx")]

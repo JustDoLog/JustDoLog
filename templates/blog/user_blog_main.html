@@ -9,150 +9,180 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 max-w-[1000px]">
-    <!-- 블로거 프로필 -->
-    <div class="flex items-center justify-between mb-12">
-        <div class="flex items-center gap-6">
-            {% if blog.owner.profile_image %}
-                <img src="{{ blog.owner.profile_image.url }}"
-                     alt="{{ blog.owner.username }}"
-                     class="w-20 h-20 rounded-full object-cover">
-            {% else %}
-                <svg class="w-20 h-20 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                </svg>
-            {% endif %}
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">{{ blog.owner.username }}</h1>
-                <div class="flex items-center gap-4 mt-2 text-sm text-gray-500">
-                    <span>게시글 {{ posts.count }}</span>
-                    <span id="followers-count">팔로워 {{ blog.owner.followers.count }}</span>
+<div class="relative">
+    <!-- 태그 리스트 (absolute positioning) -->
+    <div class="absolute left-[-290px] top-[180px] w-60">
+        <div class="sticky top-8">
+            <div class="bg-white rounded-lg shadow-sm">
+                <div class="space-y-2 p-4">
+                    <a href="{% url 'user_blog_main' username=blog.owner.username %}" 
+                       class="flex items-center justify-between px-4 py-2 rounded-lg transition-colors duration-200 {% if not request.GET.tag %}bg-gray-900 text-white{% else %}text-gray-600 hover:bg-gray-50{% endif %}">
+                        <span>전체보기</span>
+                        <span class="text-sm {% if not request.GET.tag %}text-white/80{% else %}text-gray-400{% endif %}">{{ blog.posts.count }}</span>
+                    </a>
+                    {% for tag in blog.get_tags_with_count %}
+                    <a href="?tag={{ tag.name }}" 
+                       class="flex items-center justify-between px-4 py-2 rounded-lg transition-colors duration-200 {% if request.GET.tag == tag.name %}bg-gray-900 text-white{% else %}text-gray-600 hover:bg-gray-50{% endif %}">
+                        <span>#{{ tag.name }}</span>
+                        <span class="text-sm {% if request.GET.tag == tag.name %}text-white/80{% else %}text-gray-400{% endif %}">{{ tag.posts_count }}</span>
+                    </a>
+                    {% endfor %}
                 </div>
             </div>
         </div>
-
-        <!-- 팔로우 버튼 (자신의 블로그가 아닐 경우에만 표시) -->
-        {% if user.is_authenticated and user != blog.owner %}
-            <button hx-post="{% url 'follow_user' username=blog.owner.username %}"
-                    hx-swap="outerHTML"
-                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                    class="{% if is_following %}bg-gray-900 text-white hover:bg-gray-800{% else %}text-gray-900 bg-white border border-gray-900 hover:bg-gray-50{% endif %} px-6 py-2 text-sm font-medium rounded-full transition-colors">
-                {% if is_following %}
-                    팔로잉
-                {% else %}
-                    팔로우
-                {% endif %}
-            </button>
-        {% endif %}
     </div>
 
-    <!-- 포스트 리스트 -->
-    <div class="divide-y divide-gray-100">
-        {% for post in posts %}
-        <article class="py-8">
-            <div class="flex gap-6">
-                <div class="flex-1">
-                    <!-- 제목 -->
-                    <h2 class="text-xl font-bold mb-2">
-                        {% if user == blog.owner and post.status == 'draft' %}
-                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 mr-2">
-                                임시
-                            </span>
-                        {% endif %}
-                        <a href="{% url 'user_post_detail' username=post.blog.owner.username slug=post.slug %}"
-                           class="text-gray-900 hover:underline">
-                            {{ post.title }}
-                        </a>
-                    </h2>
-                    
-                    <!-- 내용 미리보기 -->
-                    <p class="text-gray-600 text-base mb-3 line-clamp-2 leading-[1.6]">
-                        {{ post.content|striptags|safe|truncatewords:30 }}
-                    </p>
-
-                    <!-- 하단 메타 정보 -->
-                    <div class="flex items-center justify-between text-sm text-gray-500">
-                        <div class="flex items-center space-x-4">
-                            <span>{{ post.created_at|date:"Y년 m월 d일" }}</span>
-                            <span>조회수 {{ post.views }}</span>
-                            <span class="post-likes-count">좋아요 {{ post.likes }}</span>
-                            {% if post.tags.all %}
-                            <div class="flex items-center space-x-2">
-                                {% for tag in post.tags.all|slice:":3" %}
-                                <a href="#" class="text-gray-500 hover:underline">#{{ tag.name }}</a>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                        </div>
-                        
-                        <!-- 좋아요 버튼 -->
-                        <button class="like-button flex items-center text-gray-500 hover:text-gray-900 transition-colors {% if post in user.liked_posts.all %}text-gray-900{% endif %}"
-                                {% if user.is_authenticated %}
-                                    hx-post="{% url 'toggle_like' username=post.blog.owner.username slug=post.slug %}"
-                                    hx-swap="none"
-                                    hx-trigger="click"
-                                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                                {% else %}
-                                    onclick="window.location.href='{% url 'account_login' %}?next={{ request.path }}'"
-                                {% endif %}>
-                            <svg class="w-5 h-5" fill="{% if post in user.liked_posts.all %}currentColor{% else %}none{% endif %}" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
-                                </path>
-                            </svg>
-                            <span class="likes-count ml-1">{{ post.likes }}</span>
-                        </button>
+    <!-- 기존 컨테이너 (width 그대로 유지) -->
+    <div class="container mx-auto px-4 py-8 max-w-[1000px]">
+        <!-- 블로거 프로필 -->
+        <div class="flex items-center justify-between mb-12">
+            <div class="flex items-center gap-6">
+                {% if blog.owner.profile_image %}
+                    <img src="{{ blog.owner.profile_image.url }}"
+                         alt="{{ blog.owner.username }}"
+                         class="w-20 h-20 rounded-full object-cover">
+                {% else %}
+                    <svg class="w-20 h-20 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                    </svg>
+                {% endif %}
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">{{ blog.owner.username }}</h1>
+                    <div class="flex items-center gap-4 mt-2 text-sm text-gray-500">
+                        <span>게시글 {{ posts.count }}</span>
+                        <span id="followers-count">팔로워 {{ blog.owner.followers.count }}</span>
                     </div>
                 </div>
-
-                <!-- 썸네일 이미지 -->
-                {% if post.thumbnail %}
-                <a href="{% url 'user_post_detail' username=post.blog.owner.username slug=post.slug %}" 
-                   class="block flex-shrink-0 w-[200px] h-[134px] rounded-lg overflow-hidden">
-                    <img src="{{ post.thumbnail }}" 
-                         alt="{{ post.title }}"
-                         class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
-                </a>
-                {% endif %}
             </div>
-        </article>
-        {% empty %}
-        <div class="text-center py-12 text-gray-500">
-            아직 작성한 게시글이 없습니다.
-            {% if user == blog.owner %}
-            <p class="mt-2">
-                <a href="{% url 'user_post_create' username=user.username %}" 
-                   class="text-gray-900 hover:underline">첫 번째 글을 작성해보세요!</a>
-            </p>
+
+            <!-- 팔로우 버튼 (자신의 블로그가 아닐 경우에만 표시) -->
+            {% if user.is_authenticated and user != blog.owner %}
+                <button hx-post="{% url 'follow_user' username=blog.owner.username %}"
+                        hx-swap="outerHTML"
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                        class="{% if is_following %}bg-gray-900 text-white hover:bg-gray-800{% else %}text-gray-900 bg-white border border-gray-900 hover:bg-gray-50{% endif %} px-6 py-2 text-sm font-medium rounded-full transition-colors">
+                    {% if is_following %}
+                        팔로잉
+                    {% else %}
+                        팔로우
+                    {% endif %}
+                </button>
             {% endif %}
         </div>
-        {% endfor %}
-    </div>
 
-    <!-- 페이지네이션 -->
-    {% if is_paginated %}
-    <div class="flex justify-center mt-12">
-        <nav class="flex gap-2">
-            {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}" 
-               class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border rounded-full transition-colors duration-200">
-                이전
-            </a>
-            {% endif %}
-            
-            <span class="px-4 py-2 text-sm text-gray-400">
-                {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
-            </span>
+        <!-- 포스트 리스트 -->
+        <div class="divide-y divide-gray-100">
+            {% for post in posts %}
+            <article class="py-8">
+                <div class="flex gap-6">
+                    <div class="flex-1">
+                        <!-- 제목 -->
+                        <h2 class="text-xl font-bold mb-2">
+                            {% if user == blog.owner and post.status == 'draft' %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800 mr-2">
+                                    임시
+                                </span>
+                            {% endif %}
+                            <a href="{% url 'user_post_detail' username=post.blog.owner.username slug=post.slug %}"
+                               class="text-gray-900 hover:underline">
+                                {{ post.title }}
+                            </a>
+                        </h2>
+                        
+                        <!-- 내용 미리보기 -->
+                        <p class="text-gray-600 text-base mb-3 line-clamp-2 leading-[1.6]">
+                            {{ post.content|striptags|safe|truncatewords:30 }}
+                        </p>
 
-            {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}"
-               class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border rounded-full transition-colors duration-200">
-                다음
-            </a>
-            {% endif %}
-        </nav>
+                        <!-- 하단 메타 정보 -->
+                        <div class="flex items-center justify-between text-sm text-gray-500">
+                            <div class="flex flex-col gap-2">
+                                <div class="flex items-center space-x-4">
+                                    <span>{{ post.created_at|date:"Y년 m월 d일" }}</span>
+                                    <span>조회수 {{ post.views }}</span>
+                                    <span class="post-likes-count">좋아요 {{ post.likes }}</span>
+                                </div>
+                                {% if post.tags.all %}
+                                <div class="flex items-center space-x-2">
+                                    {% for tag in post.tags.all %}
+                                    <a href="?tag={{ tag.name }}" 
+                                       class="px-3 py-1 text-sm text-gray-600 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                                        #{{ tag.name }}
+                                    </a>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- 좋아요 버튼 -->
+                            <button class="like-button flex items-center text-gray-500 hover:text-gray-900 transition-colors {% if post in user.liked_posts.all %}text-gray-900{% endif %}"
+                                    {% if user.is_authenticated %}
+                                        hx-post="{% url 'toggle_like' username=post.blog.owner.username slug=post.slug %}"
+                                        hx-swap="none"
+                                        hx-trigger="click"
+                                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                    {% else %}
+                                        onclick="window.location.href='{% url 'account_login' %}?next={{ request.path }}'"
+                                    {% endif %}>
+                                <svg class="w-5 h-5" fill="{% if post in user.liked_posts.all %}currentColor{% else %}none{% endif %}" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                                          d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                                    </path>
+                                </svg>
+                                <span class="likes-count ml-1">{{ post.likes }}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 썸네일 이미지 -->
+                    {% if post.thumbnail %}
+                    <a href="{% url 'user_post_detail' username=post.blog.owner.username slug=post.slug %}" 
+                       class="block flex-shrink-0 w-[200px] h-[134px] rounded-lg overflow-hidden">
+                        <img src="{{ post.thumbnail }}" 
+                             alt="{{ post.title }}"
+                             class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                    </a>
+                    {% endif %}
+                </div>
+            </article>
+            {% empty %}
+            <div class="text-center py-12 text-gray-500">
+                아직 작성한 게시글이 없습니다.
+                {% if user == blog.owner %}
+                <p class="mt-2">
+                    <a href="{% url 'user_post_create' username=user.username %}" 
+                       class="text-gray-900 hover:underline">첫 번째 글을 작성해보세요!</a>
+                </p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 페이지네이션 -->
+        {% if is_paginated %}
+        <div class="flex justify-center mt-12">
+            <nav class="flex gap-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" 
+                   class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border rounded-full transition-colors duration-200">
+                    이전
+                </a>
+                {% endif %}
+                
+                <span class="px-4 py-2 text-sm text-gray-400">
+                    {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+                </span>
+
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}"
+                   class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border rounded-full transition-colors duration-200">
+                    다음
+                </a>
+                {% endif %}
+            </nav>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
 <!-- JavaScript for handling likes -->

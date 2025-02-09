@@ -1,0 +1,12 @@
+{% extends "discovery/base_post_list.html" %}
+
+{% block show_title %}
+<div class="text-center mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">#{{ tag_name }}</h1>
+    <p class="mt-2 text-gray-600">{{ posts.count }}개의 게시글</p>
+</div>
+{% endblock %}
+
+{% block empty_message %}
+'#{{ tag_name }}' 태그가 포함된 게시글이 없습니다.
+{% endblock %} 

@@ -43,12 +43,20 @@ class UserBlogMainView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        blog = self.get_object()
+        
+        # 선택된 태그 확인
+        selected_tag = self.request.GET.get('tag')
         
         # 현재 사용자가 블로그 소유자인 경우 draft 포함, 아닌 경우 published만
-        if self.request.user == self.object.owner:
-            posts = Post.objects.filter(blog=self.object)
+        if self.request.user == blog.owner:
+            posts = Post.objects.filter(blog=blog)
         else:
-            posts = Post.objects.filter(blog=self.object, status="published")
+            posts = Post.objects.filter(blog=blog, status="published")
+        
+        # 태그로 필터링
+        if selected_tag:
+            posts = posts.filter(tags__name=selected_tag)
             
         posts = posts.order_by("-created_at")
         
@@ -68,11 +76,15 @@ class UserBlogMainView(DetailView):
         context["page_obj"] = posts
         
         # 팔로우 상태 확인
-        if self.request.user.is_authenticated and self.request.user != self.object.owner:
+        if self.request.user.is_authenticated and self.request.user != blog.owner:
             context["is_following"] = Follow.objects.filter(
-                follower=self.request.user, following=self.object.owner
+                follower=self.request.user, following=blog.owner
             ).exists()
             
+        # 태그 정보 추가
+        context["tags"] = blog.get_tags_with_count()
+        context["selected_tag"] = selected_tag
+        
         return context
 
 
@@ -121,7 +133,7 @@ class UserPostDetailView(PostGetObjectMixin, DetailView):
 class UserPostCreateView(LoginRequiredMixin, BlogOwnerRequiredMixin, CreateView):
     model = Post
     template_name = "blog/user_post_form.html"
-    fields = ["title", "content", "status"]
+    fields = ["title", "content", "status", "tags"]
 
     def form_valid(self, form):
         form.instance.author = self.request.user
@@ -140,7 +152,7 @@ class UserPostUpdateView(
 ):
     model = Post
     template_name = "blog/user_post_form.html"
-    fields = ["title", "content", "status"]
+    fields = ["title", "content", "status", "tags"]
 
     def get_success_url(self):
         return reverse(

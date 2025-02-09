@@ -185,3 +185,22 @@ class FollowingPostsView(LoginRequiredMixin, ListView):
             follower=self.request.user
         ).count()
         return context
+
+
+class TaggedPostsView(ListView):
+    model = Post
+    template_name = "discovery/tagged_posts.html"
+    context_object_name = "posts"
+    paginate_by = 10
+
+    def get_queryset(self):
+        tag_name = self.kwargs.get('tag_name')
+        return Post.objects.filter(
+            tags__name__in=[tag_name],
+            status="published"
+        ).order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['tag_name'] = self.kwargs.get('tag_name')
+        return context

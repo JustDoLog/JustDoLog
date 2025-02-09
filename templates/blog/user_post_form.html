@@ -1,7 +1,13 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}
     {% if form.instance.pk %}글 수정{% else %}새 글 작성{% endif %}
+{% endblock %}
+
+{% block extra_head %}
+<!-- TinyMCE -->
+{{ form.media }}
 {% endblock %}
 
 {% block content %}
@@ -30,6 +36,50 @@
                    value="{{ form.title.value|default:'' }}"
                    class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
                    placeholder="제목을 입력하세요">
+        </div>
+
+        <!-- Tags Field -->
+        <div class="space-y-1" x-data="tagInput">
+            <label class="block text-sm font-medium text-secondary">태그</label>
+            {% if form.tags.errors %}
+                <div class="text-sm text-red-600">
+                    {{ form.tags.errors }}
+                </div>
+            {% endif %}
+            
+            <!-- 태그 입력 필드 -->
+            <div class="relative">
+                <div class="min-h-[42px] p-1 border border-gray-300 rounded-lg bg-white focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+                    <div class="flex flex-wrap gap-1">
+                        <template x-for="tag in tags" :key="tag">
+                            <span class="m-1 inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-sm font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                                <span x-text="tag"></span>
+                                <button type="button" 
+                                        @click="removeTag(tag)" 
+                                        class="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full hover:bg-gray-200">
+                                    <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </span>
+                        </template>
+                        <input type="text"
+                               x-model="newTag"
+                               @keydown.enter.prevent="handleKeydown($event)"
+                               @keydown.comma.prevent="handleKeydown($event)"
+                               @keydown.space.prevent="handleKeydown($event)"
+                               @blur="handleBlur"
+                               placeholder="태그 입력... (최대 5개)"
+                               :disabled="tags.length >= 5"
+                               class="flex-1 border-0 bg-transparent p-1.5 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 히든 필드: 실제 폼 제출에 사용됨 -->
+            <input type="hidden" name="{{ form.tags.name }}" :value="tags.join(',')" />
+            
+            <p class="mt-1 text-sm text-gray-500">Enter, 쉼표, 또는 스페이스로 태그를 구분할 수 있습니다.</p>
         </div>
 
         <!-- Content Field -->
@@ -80,5 +130,48 @@
     </form>
 </div>
 
-{{ form.media }}
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('tagInput', () => ({
+            tags: [{% for tag in form.tags.value.all %}'{{ tag.name }}',{% endfor %}],
+            newTag: '',
+            
+            handleKeydown(event) {
+                // IME 입력 중이면 무시
+                if (event.isComposing) return;
+                
+                const tag = this.newTag.trim();
+                if (!tag) return;
+                
+                // 중복 체크
+                if (this.tags.includes(tag)) {
+                    this.newTag = '';
+                    return;
+                }
+                
+                // 태그 개수 제한 체크
+                if (this.tags.length >= 5) {
+                    alert('태그는 최대 5개까지만 추가할 수 있습니다.');
+                    this.newTag = '';
+                    return;
+                }
+                
+                this.tags.push(tag);
+                this.newTag = '';
+            },
+            
+            handleBlur() {
+                const tag = this.newTag.trim();
+                if (tag && !this.tags.includes(tag) && this.tags.length < 5) {
+                    this.tags.push(tag);
+                }
+                this.newTag = '';
+            },
+            
+            removeTag(tagToRemove) {
+                this.tags = this.tags.filter(tag => tag !== tagToRemove);
+            }
+        }));
+    });
+</script>
 {% endblock %} 

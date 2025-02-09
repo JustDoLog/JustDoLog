@@ -13,4 +13,5 @@ urlpatterns = [
         name="popular_bloggers",
     ),
     path("search/", views.SearchView.as_view(), name="search"),
+    path("tags/<str:tag_name>/", views.TaggedPostsView.as_view(), name="tagged_posts"),
 ]
