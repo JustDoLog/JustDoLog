@@ -6,6 +6,7 @@ urlpatterns = [
     path("recent/", views.RecentPostsView.as_view(), name="recent_posts"),
     path("liked/", views.LikedPostsView.as_view(), name="liked_posts"),
     path("recent_read/", views.RecentReadPostsView.as_view(), name="recent_read_posts"),
+    path("following/", views.FollowingPostsView.as_view(), name="following_posts"),
     path(
         "bloggers/popular/",
         views.PopularBloggersView.as_view(),

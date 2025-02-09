@@ -2,85 +2,133 @@
 {% load static %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8 max-w-[1728px]">
-    <!-- 페이지 제목 -->
+<div class="container mx-auto px-4 py-8 max-w-[1000px]">
+    <!-- 메인 네비게이션 -->
+    <div class="border-b border-gray-100 -mt-4 mb-8">
+        <nav class="flex items-center">
+            <!-- 일반 메뉴 -->
+            <div class="flex items-center space-x-8">
+                <a href="{% url 'trending_day' %}" 
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'trending_day' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                    트렌딩
+                </a>
+                <a href="{% url 'recent_posts' %}" 
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'recent_posts' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                    최신
+                </a>
+                <a href="{% url 'popular_bloggers' %}" 
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'popular_bloggers' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                    인기 블로거
+                </a>
+            </div>
+
+            <!-- 구분선 -->
+            <div class="mx-6 h-4 w-px bg-gray-200"></div>
+
+            <!-- 개인화된 메뉴 -->
+            {% if user.is_authenticated %}
+            <div class="flex items-center space-x-8">
+                <a href="{% url 'liked_posts' %}" 
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'liked_posts' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                    좋아요한 글
+                </a>
+                <a href="{% url 'recent_read_posts' %}" 
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'recent_read_posts' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                    최근 읽은 글
+                </a>
+                <a href="{% url 'following_posts' %}" 
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'following_posts' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                    팔로잉
+                </a>
+            </div>
+            {% endif %}
+        </nav>
+    </div>
+
+    <!-- 페이지 제목 (선택적으로 숨김) -->
+    {% block show_title %}
     <h1 class="text-3xl font-bold text-center mb-8">{% block page_title %}{% endblock %}</h1>
+    {% endblock %}
 
     <!-- 필터 네비게이션 -->
     {% block filters %}{% endblock %}
 
-    <!-- 포스트 그리드 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+    <!-- 포스트 리스트 -->
+    <div class="divide-y divide-gray-100">
         {% for post in posts %}
-        <article class="group cursor-pointer">
-            <!-- 썸네일 이미지 -->
-            {% if post.thumbnail %}
-            <a href="{% url 'user_post_detail' username=post.blog.owner.username slug=post.slug %}" 
-               class="block w-full h-[240px] mb-4 rounded-md overflow-hidden">
-                <img src="{{ post.thumbnail.url }}" 
-                     alt="" 
-                     class="w-full h-full object-cover transform group-hover:scale-[1.02] transition-transform duration-200">
-            </a>
-            {% endif %}
-
-            <!-- 컨텐츠 영역 -->
-            <div class="p-4">
-                <!-- 해시태그 -->
-                <div class="flex flex-wrap gap-2 mb-3">
-                    {% for tag in post.tags.all|slice:":3" %}
-                    <a href="#" class="text-[14px] text-blue-500 hover:text-blue-600 transition-colors duration-200">
-                        #{{ tag.name }}
-                    </a>
-                    {% endfor %}
-                </div>
-
-                <!-- 제목 -->
-                <h2 class="text-[22px] font-bold mb-2 text-gray-900 line-clamp-2 leading-snug group-hover:text-blue-500 transition-colors duration-200">
-                    <a href="{% url 'user_post_detail' username=post.blog.owner.username slug=post.slug %}">
-                        {{ post.title }}
-                    </a>
-                </h2>
-                
-                <!-- 내용 미리보기 -->
-                <p class="text-gray-500 text-[15px] mb-4 line-clamp-3 leading-[1.7]">
-                    {{ post.content|striptags|truncatewords:45 }}
-                </p>
-                
-                <!-- 메타 정보 -->
-                <div class="flex items-center justify-between text-sm text-gray-500">
-                    <div class="flex items-center gap-2">
-                        <span>{{ post.created_at|date:"Y년 m월 d일" }}</span>
-                        <span class="text-gray-300">·</span>
-                        <span>댓글 {{ post.comments.count }}</span>
-                    </div>
-                </div>
-
-                <div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+        <article class="py-8">
+            <div class="flex gap-6">
+                <div class="flex-1">
                     <!-- 작성자 정보 -->
-                    <div class="flex items-center">
-                        <img src="{% if post.blog.owner.profile_image %}{{ post.blog.owner.profile_image.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}"
-                             alt="{{ post.blog.owner.username }}"
-                             class="w-8 h-8 rounded-full object-cover mr-2">
+                    <div class="flex items-center mb-2">
                         <a href="{% url 'user_blog_main' username=post.blog.owner.username %}" 
-                           class="text-sm text-gray-500 hover:text-gray-700">
-                            by <span class="font-medium">{{ post.blog.owner.username }}</span>
+                           class="flex items-center group">
+                            {% if post.blog.owner.profile_image %}
+                                <img src="{{ post.blog.owner.profile_image.url }}"
+                                     alt="{{ post.blog.owner.username }}"
+                                     class="w-8 h-8 rounded-full object-cover">
+                            {% else %}
+                                <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                                </svg>
+                            {% endif %}
+                            <span class="ml-3 text-sm font-medium text-gray-900 group-hover:text-primary">
+                                {{ post.blog.owner.username }}
+                            </span>
                         </a>
                     </div>
+
+                    <!-- 제목 -->
+                    <h2 class="text-xl font-bold mb-2 text-gray-900 hover:text-primary transition-colors">
+                        <a href="{% url 'user_post_detail' username=post.blog.owner.username slug=post.slug %}">
+                            {{ post.title }}
+                        </a>
+                    </h2>
                     
-                    <!-- 좋아요 -->
-                    <div class="flex items-center text-sm text-gray-400">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
-                            </path>
-                        </svg>
-                        <span class="ml-1">{{ post.likes }}</span>
+                    <!-- 내용 미리보기 -->
+                    <p class="text-gray-600 text-base mb-3 line-clamp-2 leading-[1.6]">
+                        {{ post.content|striptags|truncatewords:30 }}
+                    </p>
+
+                    <!-- 하단 메타 정보 -->
+                    <div class="flex items-center justify-between text-sm text-gray-500">
+                        <div class="flex items-center space-x-4">
+                            <span>{{ post.created_at|date:"Y년 m월 d일" }}</span>
+                            <span>조회수 {{ post.views }}</span>
+                            <span>좋아요 {{ post.likes }}</span>
+                            {% if post.tags.all %}
+                            <div class="flex items-center space-x-2">
+                                {% for tag in post.tags.all|slice:":3" %}
+                                <a href="#" class="hover:text-primary">#{{ tag.name }}</a>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- 좋아요 버튼 -->
+                        <button class="flex items-center text-gray-500 hover:text-primary transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+                                </path>
+                            </svg>
+                        </button>
                     </div>
                 </div>
+
+                <!-- 썸네일 이미지 -->
+                {% if post.thumbnail %}
+                <a href="{% url 'user_post_detail' username=post.blog.owner.username slug=post.slug %}" 
+                   class="block flex-shrink-0 w-[200px] h-[134px] rounded-lg overflow-hidden">
+                    <img src="{{ post.thumbnail.url }}" 
+                         alt="" 
+                         class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
+                </a>
+                {% endif %}
             </div>
         </article>
         {% empty %}
-        <div class="col-span-full text-center py-12 text-gray-500">
+        <div class="text-center py-12 text-gray-500">
             {% block empty_message %}아직 게시글이 없습니다.{% endblock %}
         </div>
         {% endfor %}
@@ -92,18 +140,18 @@
         <nav class="flex gap-2">
             {% if page_obj.has_previous %}
             <a href="?page={{ page_obj.previous_page_number }}{% block pagination_query_params %}{% endblock %}" 
-               class="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200">
+               class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border rounded-full transition-colors duration-200">
                 이전
             </a>
             {% endif %}
             
-            <span class="px-3 py-1.5 text-sm text-gray-400">
+            <span class="px-4 py-2 text-sm text-gray-400">
                 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
             </span>
 
             {% if page_obj.has_next %}
             <a href="?page={{ page_obj.next_page_number }}{% block pagination_query_params_next %}{% endblock %}"
-               class="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-700 transition-colors duration-200">
+               class="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border rounded-full transition-colors duration-200">
                 다음
             </a>
             {% endif %}

@@ -41,3 +41,42 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.username
+    
+    def follow(self, user):
+        if user != self:
+            Follow.objects.get_or_create(follower=self, following=user)
+
+    def unfollow(self, user):
+        Follow.objects.filter(follower=self, following=user).delete()
+
+    def is_following(self, user):
+        return self.following.filter(following=user).exists()
+
+    def get_followers_count(self):
+        return self.followers.count()
+
+    def get_following_count(self):
+        return self.following.count()    
+
+
+class Follow(models.Model):
+    follower = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="following")
+    following = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="followers")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "팔로잉"
+        verbose_name_plural = "팔로잉"
+        # 동일한 팔로잉 관계가 중복되지 않도록
+        unique_together = ('follower', 'following')
+        # 자기 자신을 팔로우할 수 없도록 제약조건 추가 가능
+        constraints = [
+            models.CheckConstraint(
+                check=~models.Q(follower=models.F('following')),
+                name='no_self_following'
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.follower.username} follows {self.following.username}"    

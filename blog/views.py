@@ -1,8 +1,8 @@
-from django.views.generic import DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import DetailView, CreateView, UpdateView, DeleteView, ListView
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse, reverse_lazy
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 import uuid
@@ -41,7 +41,8 @@ class UserBlogMainView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["posts"] = context["blog"].posts.order_by("-created_at")
+        context["posts"] = context["blog"].posts.filter(status="published").order_by("-created_at")
+        context["is_owner"] = self.request.user == context["blog"].owner
         return context
 
 
@@ -49,6 +50,21 @@ class UserPostDetailView(PostGetObjectMixin, DetailView):
     model = Post
     template_name = "blog/user_post_detail.html"
     context_object_name = "post"
+
+    def get_object(self):
+        post = super().get_object()
+        # draft 상태의 글은 작성자만 볼 수 있음
+        if post.status == "draft" and post.blog.owner != self.request.user:
+            raise Http404("이 글을 볼 수 있는 권한이 없습니다.")
+        return post
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["is_owner"] = self.request.user == context["post"].blog.owner
+        context["is_following"] = False
+        if self.request.user.is_authenticated:
+            context["is_following"] = self.request.user.following.filter(following=context["post"].blog.owner).exists()
+        return context
 
 
 class UserPostCreateView(LoginRequiredMixin, BlogOwnerRequiredMixin, CreateView):
@@ -130,3 +146,21 @@ def upload_image(request, username):
         return JsonResponse({"location": file_url})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+class UserPostDraftListView(LoginRequiredMixin, ListView):
+    model = Post
+    template_name = "blog/user_post_draft_list.html"
+    context_object_name = "posts"
+    paginate_by = 10
+
+    def get_queryset(self):
+        return Post.objects.filter(
+            blog__owner=self.request.user,
+            status="draft"
+        ).order_by("-created_at")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["blog"] = Blog.objects.get(owner=self.request.user)
+        return context

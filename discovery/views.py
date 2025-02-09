@@ -7,7 +7,7 @@ from django.db.models import Q
 from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
 from datetime import timedelta
 from blog.models import Post, Blog, PostLike, PostRead
-from user.models import CustomUser
+from user.models import CustomUser, Follow
 from django.conf import settings
 
 
@@ -111,4 +111,31 @@ class SearchView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["query"] = self.request.GET.get("q", "")
+        return context
+
+
+class FollowingPostsView(LoginRequiredMixin, ListView):
+    model = Post
+    template_name = "discovery/following_posts.html"
+    context_object_name = "posts"
+    paginate_by = 9
+
+    def get_queryset(self):
+        # 현재 사용자가 팔로우하는 사용자들의 ID 목록을 가져옴
+        following_users = Follow.objects.filter(
+            follower=self.request.user
+        ).values_list('following', flat=True)
+        
+        # 팔로우하는 사용자들의 게시글을 최신순으로 가져옴
+        return Post.objects.filter(
+            blog__owner__in=following_users,
+            status="published"
+        ).order_by("-created_at")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # 팔로잉 수를 컨텍스트에 추가
+        context["following_count"] = Follow.objects.filter(
+            follower=self.request.user
+        ).count()
         return context

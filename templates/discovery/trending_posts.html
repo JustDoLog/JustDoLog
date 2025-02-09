@@ -1,23 +1,23 @@
 {% extends "discovery/base_post_list.html" %}
 
-{% block page_title %}트렌딩{% endblock %}
+{% block show_title %}{% endblock %}
 
 {% block filters %}
-<div class="flex justify-center mb-12 space-x-2">
+<div class="flex justify-start mb-8 space-x-2">
     <a href="?period=day" 
-       class="px-6 py-2 rounded-full transition-colors duration-200 {% if request.GET.period == 'day' or not request.GET.period %}bg-blue-500 text-white ring-2 ring-blue-500 ring-offset-2{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+       class="px-4 py-1.5 text-sm rounded-full transition-colors duration-200 {% if request.GET.period == 'day' or not request.GET.period %}bg-primary text-white{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
         일간
     </a>
     <a href="?period=week" 
-       class="px-6 py-2 rounded-full transition-colors duration-200 {% if request.GET.period == 'week' %}bg-blue-500 text-white ring-2 ring-blue-500 ring-offset-2{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+       class="px-4 py-1.5 text-sm rounded-full transition-colors duration-200 {% if request.GET.period == 'week' %}bg-primary text-white{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
         주간
     </a>
     <a href="?period=month" 
-       class="px-6 py-2 rounded-full transition-colors duration-200 {% if request.GET.period == 'month' %}bg-blue-500 text-white ring-2 ring-blue-500 ring-offset-2{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+       class="px-4 py-1.5 text-sm rounded-full transition-colors duration-200 {% if request.GET.period == 'month' %}bg-primary text-white{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
         월간
     </a>
     <a href="?period=year" 
-       class="px-6 py-2 rounded-full transition-colors duration-200 {% if request.GET.period == 'year' %}bg-blue-500 text-white ring-2 ring-blue-500 ring-offset-2{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
+       class="px-4 py-1.5 text-sm rounded-full transition-colors duration-200 {% if request.GET.period == 'year' %}bg-primary text-white{% else %}text-gray-600 hover:bg-gray-100{% endif %}">
         연간
     </a>
 </div>

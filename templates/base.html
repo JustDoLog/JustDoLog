@@ -231,9 +231,15 @@
                             <button @click="open = !open" 
                                     @click.away="open = false"
                                     class="flex items-center gap-2 p-1 rounded-full hover:bg-gray-50">
-                                <img src="{% if user.profile_image %}{{ user.profile_image.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}"
-                                     alt="" 
-                                     class="w-8 h-8 rounded-full object-cover">
+                                {% if user.profile_image %}
+                                    <img src="{{ user.profile_image.url }}"
+                                         alt="" 
+                                         class="w-8 h-8 rounded-full object-cover">
+                                {% else %}
+                                    <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
+                                    </svg>
+                                {% endif %}
                                 <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                 </svg>
@@ -247,19 +253,20 @@
                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                     내 블로그
                                 </a>
-                                <a href="{% url 'liked_posts' %}" 
+                                <a href="{% url 'user_post_draft' username=user.username %}" 
                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    좋아요한 글
+                                    임시 글
                                 </a>
-                                <a href="{% url 'recent_read_posts' %}" 
+                                <a href="{% url 'profile' %}" 
                                    class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                                    최근 읽은 글
+                                    설정
                                 </a>
                                 <div class="border-t border-gray-100 my-1"></div>
-                                <a href="{% url 'account_logout' %}" 
-                                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                <button type="button"
+                                        onclick="handleLogout()"
+                                        class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                     로그아웃
-                                </a>
+                                </button>
                             </div>
                         </div>
                     {% else %}
@@ -303,13 +310,13 @@
                        class="block px-3 py-2 text-base text-gray-700 hover:bg-gray-50 rounded-md">
                         내 블로그
                     </a>
-                    <a href="{% url 'liked_posts' %}" 
+                    <a href="{% url 'user_post_draft' username=user.username %}" 
                        class="block px-3 py-2 text-base text-gray-700 hover:bg-gray-50 rounded-md">
-                        좋아요한 글
+                        임시 글
                     </a>
-                    <a href="{% url 'recent_read_posts' %}" 
+                    <a href="{% url 'profile' %}" 
                        class="block px-3 py-2 text-base text-gray-700 hover:bg-gray-50 rounded-md">
-                        최근 읽은 글
+                        설정
                     </a>
                     <a href="{% url 'account_logout' %}" 
                        class="block px-3 py-2 text-base text-gray-700 hover:bg-gray-50 rounded-md">
@@ -350,6 +357,28 @@
                 menuButton.setAttribute('aria-expanded', !expanded);
                 mobileMenu.classList.toggle('hidden');
             });
+        }
+
+        // AJAX 로그아웃 처리
+        async function handleLogout() {
+            try {
+                const response = await fetch('/accounts/logout/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.cookie.split('; ').find(row => row.startsWith('csrftoken=')).split('=')[1],
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                });
+                
+                if (response.ok) {
+                    // 현재 페이지 새로고침
+                    window.location.reload();
+                } else {
+                    console.error('로그아웃 실패');
+                }
+            } catch (error) {
+                console.error('로그아웃 처리 중 오류 발생:', error);
+            }
         }
     </script>
 </body>

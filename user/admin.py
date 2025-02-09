@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import CustomUser
+from .models import CustomUser, Follow
 
 
 class CustomUserAdmin(UserAdmin):
@@ -48,4 +48,9 @@ class CustomUserAdmin(UserAdmin):
     )
 
 
+class FollowAdmin(admin.ModelAdmin):
+    list_display = ("follower", "following")
+
+
 admin.site.register(CustomUser, CustomUserAdmin)
+admin.site.register(Follow, FollowAdmin)

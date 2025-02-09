@@ -19,6 +19,11 @@ urlpatterns = [
         views.UserPostCreateView.as_view(),
         name="user_post_create",
     ),
+    path(
+        "@<str:username>/posts/drafts/",
+        views.UserPostDraftListView.as_view(),
+        name="user_post_draft",
+    ),
     re_path(
         r"^@(?P<username>[^/]+)/posts/(?P<slug>[-\w가-힣]+)/$",
         views.UserPostDetailView.as_view(),
