@@ -1,43 +1,134 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}{{ blog.title }}{% endblock %}
 
 {% block content %}
-<div class="pb-16">
-    <!-- Blog Header -->
-    <header class="mb-12">
-        <h1 class="text-4xl font-bold text-secondary mb-4">{{ blog.title }}</h1>
-        {% if blog.description %}
-            <p class="text-gray-custom text-lg">{{ blog.description }}</p>
-        {% endif %}
+<div class="min-h-screen bg-white" x-data="{ 
+    sortBy: 'latest',
+    following: false,
+    posts: {{ posts|safe }},
+    
+    sortPosts() {
+        if (this.sortBy === 'latest') {
+            this.posts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        } else if (this.sortBy === 'views') {
+            this.posts.sort((a, b) => b.views - a.views);
+        }
+    }
+}">
+    <!-- Header -->
+    <header class="border-b border-gray-200">
+        <div class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="py-5">
+                <div class="flex justify-between items-center">
+                    <h1 class="text-3xl font-bold text-gray-900">{{ blog.owner.username }}</h1>
+                    <nav class="flex space-x-6">
+                        <a href="#" class="text-gray-500 hover:text-gray-900 font-medium">Home</a>
+                        <a href="#" class="text-gray-500 hover:text-gray-900 font-medium">About</a>
+                    </nav>
+                </div>
+            </div>
+        </div>
     </header>
 
-    <!-- Post List -->
-    <div class="space-y-12">
-        {% for post in posts %}
-            <article class="group">
-                <a href="{% url 'user_post_detail' username=blog.owner.username slug=post.slug %}" 
-                   class="block">
-                    <h2 class="text-2xl font-bold text-secondary group-hover:text-primary mb-3">
-                        {{ post.title }}
-                    </h2>
-                    <div class="text-base text-gray-600 mb-4 overflow-hidden line-clamp-3">
-                        {{ post.content|striptags|safe|truncatechars:200 }}
-                    </div>
-                    <div class="flex items-center text-sm text-gray-custom">
-                        <span>{{ post.created_at|date:"Y년 n월 j일" }}</span>
-                        {% if post.status == 'draft' %}
-                            <span class="ml-2 px-2 py-0.5 bg-yellow-50 text-yellow-600 text-xs rounded-full border border-yellow-200">임시저장</span>
-                        {% endif %}
-                    </div>
-                </a>
-            </article>
-        {% empty %}
-            <div class="text-center py-12">
-                <p class="text-gray-custom">아직 작성된 글이 없습니다.</p>
+    <!-- Main content -->
+    <main class="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col lg:flex-row gap-12">
+            <!-- Posts section -->
+            <div class="lg:w-2/3">
+                <!-- Sort controls -->
+                <div class="mb-8 flex items-center justify-between">
+                    <select x-model="sortBy" @change="sortPosts()" 
+                            class="px-3 py-2 border border-gray-200 rounded-full text-sm text-gray-600">
+                        <option value="latest">Latest</option>
+                        <option value="views">Most viewed</option>
+                    </select>
+                </div>
+
+                <!-- Posts list -->
+                <div class="space-y-8">
+                    <template x-for="post in posts" :key="post.id">
+                        <article class="group">
+                            <div class="flex items-center space-x-2 text-sm text-gray-500 mb-2">
+                                <time x-text="new Date(post.created_at).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})"></time>
+                                <span>·</span>
+                                <span>5 min read</span>
+                            </div>
+                            <div class="flex justify-between items-start gap-8">
+                                <div class="flex-1">
+                                    <h2 class="text-xl font-bold text-gray-900 mb-2 group-hover:text-gray-700">
+                                        <a :href="'/@' + post.author + '/posts/' + post.slug" x-text="post.title"></a>
+                                    </h2>
+                                    <p class="text-gray-500 line-clamp-3" x-text="post.content.replace(/<[^>]*>/g, '').substring(0, 200) + '...'"></p>
+                                </div>
+                            </div>
+                            <div class="flex items-center justify-between mt-4">
+                                <div class="flex items-center space-x-4 text-sm text-gray-500">
+                                    <span class="flex items-center">
+                                        <svg class="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                            <path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                        </svg>
+                                        <span x-text="post.views"></span>
+                                    </span>
+                                    <button class="flex items-center hover:text-gray-900">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+                                        </svg>
+                                        Save
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+                    </template>
+                </div>
             </div>
-        {% endfor %}
-    </div>
+
+            <!-- Sidebar -->
+            <div class="lg:w-1/3">
+                <div class="sticky top-6">
+                    <!-- Profile section -->
+                    <div class="mb-8">
+                        {% if blog.owner.profile_image %}
+                            <img src="{{ blog.owner.profile_image.url }}" 
+                                 alt="{{ blog.owner.username }}'s profile" 
+                                 class="w-20 h-20 rounded-full mb-4 object-cover">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ blog.owner.username|urlencode }}&background=f3f4f6&color=6b7280&size=128" 
+                                 alt="{{ blog.owner.username }}'s profile"
+                                 class="w-20 h-20 rounded-full mb-4 object-cover">
+                        {% endif %}
+                        <h2 class="text-xl font-bold text-gray-900 mb-2">{{ blog.owner.username }}</h2>
+                        <p class="text-gray-600 mb-4">{{ blog.owner.bio|default:'No bio yet.' }}</p>
+                        <div class="flex items-center space-x-4 mb-4 text-sm text-gray-500">
+                            <span>{{ blog.owner.posts.count }} posts</span>
+                            <span>·</span>
+                            <span>4.8K Followers</span>
+                        </div>
+                        <button @click="following = !following" 
+                                :class="{'bg-green-600': !following, 'bg-gray-200 text-gray-800': following}"
+                                class="w-full py-2 rounded-full text-white font-medium transition-colors duration-200">
+                            <span x-text="following ? 'Following' : 'Follow'"></span>
+                        </button>
+                    </div>
+
+                    <!-- Following section -->
+                    <div class="border-t border-gray-200 pt-8">
+                        <h3 class="text-sm font-semibold text-gray-900 mb-4">Following</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">E</div>
+                                <div class="ml-3">
+                                    <p class="text-sm font-medium text-gray-900">Example User</p>
+                                    <p class="text-xs text-gray-500">5 posts</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
 </div>
 {% endblock %}
 

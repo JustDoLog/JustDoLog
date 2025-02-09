@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -15,7 +16,15 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('layout', () => ({
+                mobileMenuOpen: false
+            }))
+        })
+        
         tailwind.config = {
             theme: {
                 extend: {
@@ -164,23 +173,40 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="min-h-screen flex flex-col bg-white antialiased">
+<body class="min-h-screen flex flex-col bg-white antialiased" x-data="layout">
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:p-4 focus:bg-white focus:text-primary focus:z-50">
         메인 콘텐츠로 바로가기
     </a>
 
-    <nav aria-label="메인 네비게이션" class="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-gray-100 shadow-sm">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-14">
-                <div class="flex items-center">
-                    <a href="/" class="text-xl font-bold text-primary hover:text-primary/90 transition-colors" aria-label="홈으로 이동">
+    <nav aria-label="메인 네비게이션" class="sticky top-0 z-50 bg-white/80 backdrop-blur-sm border-b border-gray-100">
+        <div class="max-w-[1728px] mx-auto px-4 sm:px-6">
+            <div class="flex items-center justify-between h-16">
+                <!-- 좌측: 로고와 검색 -->
+                <div class="flex items-center gap-8">
+                    <!-- 로고 -->
+                    <a href="/" class="text-xl font-serif font-bold text-black hover:text-black/90 transition-colors" aria-label="홈으로 이동">
                         Just Do Log
                     </a>
+
+                    <!-- 검색바 -->
+                    <form action="{% url 'search' %}" method="get" class="hidden md:block">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                                </svg>
+                            </div>
+                            <input type="search" 
+                                   name="q" 
+                                   placeholder="검색" 
+                                   class="w-64 pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-100 rounded-full focus:outline-none focus:bg-white focus:border-gray-200">
+                        </div>
+                    </form>
                 </div>
 
                 <!-- 모바일 메뉴 토글 버튼 -->
                 <button type="button" 
-                        class="lg:hidden flex items-center px-3 text-gray-500 hover:text-gray-600"
+                        class="md:hidden flex items-center p-2 text-gray-500 hover:text-gray-600"
                         aria-label="메뉴 열기"
                         aria-expanded="false"
                         aria-controls="mobile-menu">
@@ -189,29 +215,60 @@
                     </svg>
                 </button>
 
-                <!-- 데스크톱 메뉴 -->
-                <div class="hidden lg:flex items-center space-x-4">
+                <!-- 우측: 메인 네비게이션 -->
+                <div class="hidden md:flex items-center gap-2">
                     {% if user.is_authenticated %}
                         <a href="{% url 'user_post_create' username=user.username %}" 
-                           class="btn btn-secondary">
-                            새 글 작성
+                           class="inline-flex items-center px-4 py-2 text-sm text-gray-700 hover:text-gray-900">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                            글쓰기
                         </a>
-                        <a href="{% url 'user_blog_main' username=user.username %}" 
-                           class="btn btn-secondary">
-                            내 블로그
-                        </a>
-                        <div class="w-px h-4 bg-gray-200" role="separator"></div>
-                        <a href="{% url 'account_logout' %}" 
-                           class="btn btn-secondary">
-                            로그아웃
-                        </a>
+                        
+                        <!-- 프로필 드롭다운 -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button @click="open = !open" 
+                                    @click.away="open = false"
+                                    class="flex items-center gap-2 p-1 rounded-full hover:bg-gray-50">
+                                <img src="{% if user.profile_image %}{{ user.profile_image.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}"
+                                     alt="" 
+                                     class="w-8 h-8 rounded-full object-cover">
+                                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                </svg>
+                            </button>
+                            
+                            <!-- 드롭다운 메뉴 -->
+                            <div x-show="open" 
+                                 x-transition 
+                                 class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1">
+                                <a href="{% url 'user_blog_main' username=user.username %}" 
+                                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    내 블로그
+                                </a>
+                                <a href="{% url 'liked_posts' %}" 
+                                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    좋아요한 글
+                                </a>
+                                <a href="{% url 'recent_read_posts' %}" 
+                                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    최근 읽은 글
+                                </a>
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <a href="{% url 'account_logout' %}" 
+                                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                    로그아웃
+                                </a>
+                            </div>
+                        </div>
                     {% else %}
                         <a href="{% url 'account_login' %}" 
-                           class="btn btn-secondary">
+                           class="px-4 py-2 text-sm text-gray-700 hover:text-gray-900">
                             로그인
                         </a>
                         <a href="{% url 'account_signup' %}" 
-                           class="btn btn-primary">
+                           class="px-4 py-2 text-sm text-white bg-black rounded-full hover:bg-black/90">
                             회원가입
                         </a>
                     {% endif %}
@@ -220,28 +277,51 @@
         </div>
 
         <!-- 모바일 메뉴 -->
-        <div class="lg:hidden hidden" id="mobile-menu">
-            <div class="px-2 pt-2 pb-3 space-y-1 bg-white border-b border-gray-100">
+        <div class="md:hidden" id="mobile-menu" x-show="mobileMenuOpen" x-transition>
+            <div class="px-2 pt-2 pb-3 space-y-1 border-t border-gray-100">
+                <!-- 모바일 검색 -->
+                <form action="{% url 'search' %}" method="get" class="p-2">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </div>
+                        <input type="search" 
+                               name="q" 
+                               placeholder="검색" 
+                               class="w-full pl-10 pr-4 py-2 text-sm bg-gray-50 border border-gray-100 rounded-full focus:outline-none focus:bg-white focus:border-gray-200">
+                    </div>
+                </form>
+
                 {% if user.is_authenticated %}
                     <a href="{% url 'user_post_create' username=user.username %}" 
-                       class="btn-mobile btn-mobile-secondary">
+                       class="block px-3 py-2 text-base text-gray-700 hover:bg-gray-50 rounded-md">
                         새 글 작성
                     </a>
                     <a href="{% url 'user_blog_main' username=user.username %}" 
-                       class="btn-mobile btn-mobile-secondary">
+                       class="block px-3 py-2 text-base text-gray-700 hover:bg-gray-50 rounded-md">
                         내 블로그
                     </a>
+                    <a href="{% url 'liked_posts' %}" 
+                       class="block px-3 py-2 text-base text-gray-700 hover:bg-gray-50 rounded-md">
+                        좋아요한 글
+                    </a>
+                    <a href="{% url 'recent_read_posts' %}" 
+                       class="block px-3 py-2 text-base text-gray-700 hover:bg-gray-50 rounded-md">
+                        최근 읽은 글
+                    </a>
                     <a href="{% url 'account_logout' %}" 
-                       class="btn-mobile btn-mobile-secondary">
+                       class="block px-3 py-2 text-base text-gray-700 hover:bg-gray-50 rounded-md">
                         로그아웃
                     </a>
                 {% else %}
                     <a href="{% url 'account_login' %}" 
-                       class="btn-mobile btn-mobile-secondary">
+                       class="block px-3 py-2 text-base text-gray-700 hover:bg-gray-50 rounded-md">
                         로그인
                     </a>
                     <a href="{% url 'account_signup' %}" 
-                       class="btn-mobile btn-mobile-primary">
+                       class="block px-3 py-2 text-base text-white bg-black rounded-md">
                         회원가입
                     </a>
                 {% endif %}

@@ -1,14 +1,65 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1>Profile</h1>
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
 
-    <p>email: {{ user.email }}</p>
-    <p>nickname: {{ user.nickname }}</p>
-</body>
-</html>
+{% block head_title %}{% trans "Profile" %}{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex flex-col items-center justify-center px-4">
+    <div class="w-full max-w-2xl">
+        <!-- 헤더 -->
+        <h1 class="text-[2rem] font-semibold text-gray-900 mb-8">
+            {% trans "Profile Settings" %}
+        </h1>
+
+        <!-- 프로필 정보 -->
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg mb-8">
+            <div class="px-4 py-5 sm:px-6">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <img class="h-16 w-16 rounded-full" 
+                             src="{% if user.profile_image %}{{ user.profile_image.url }}{% else %}{% static 'images/default-avatar.png' %}{% endif %}" 
+                             alt="">
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-medium leading-6 text-gray-900">{{ user.username }}</h3>
+                        <p class="text-sm text-gray-500">{{ user.email }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-200">
+                <dl>
+                    <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                        <dt class="text-sm font-medium text-gray-500">{% trans "Username" %}</dt>
+                        <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ user.username }}</dd>
+                    </div>
+                    <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                        <dt class="text-sm font-medium text-gray-500">{% trans "Email" %}</dt>
+                        <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ user.email }}</dd>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                        <dt class="text-sm font-medium text-gray-500">{% trans "Date joined" %}</dt>
+                        <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{{ user.date_joined|date:"Y-m-d" }}</dd>
+                    </div>
+                </dl>
+            </div>
+        </div>
+
+        <!-- 작업 버튼들 -->
+        <div class="flex flex-col space-y-4">
+            <a href="{% url 'socialaccount_connections' %}" 
+               class="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                {% trans "Manage Social Accounts" %}
+            </a>
+            <a href="{% url 'account_email' %}" 
+               class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                {% trans "Manage Email Addresses" %}
+            </a>
+            <a href="{% url 'account_change_password' %}" 
+               class="inline-flex items-center justify-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                {% trans "Change Password" %}
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

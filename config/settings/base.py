@@ -146,23 +146,34 @@ AUTHENTICATION_BACKENDS = [
     "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
-# SOCIALACCOUNT_PROVIDERS = {
-#     "google": {
-#         "APP": {
-#             "client_id": "123",
-#             "secret": "456",
-#             "key": "",
-#         }
-#     }
-# }
-
 SITE_ID = 1
 
 ACCOUNT_EMAIL_REQUIRED = True  # 계정 이메일이 필요한가?
 ACCOUNT_USERNAME_REQUIRED = True  # 계정 이름이 필요한가?
 ACCOUNT_EMAIL_VERIFICATION = "none"  # 이메일 검증 과정이 필요한가?
-LOGIN_REDIRECT_URL = "/"
-LOGOUT_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "/"  # 로그인 후 리다이렉트 될 URL
+LOGOUT_REDIRECT_URL = "/"  # 로그아웃 후 리다이렉트 될 URL
+SOCIALACCOUNT_LOGIN_ON_GET = True  # 소셜 로그인 중간 페이지 건너뛰기
+ACCOUNT_AUTHENTICATION_METHOD = "email"  # 로그인 인증 방식을 이메일로 설정
+ACCOUNT_UNIQUE_EMAIL = True  # 이메일 중복 방지
+SOCIALACCOUNT_AUTO_SIGNUP = True  # 소셜 계정으로 로그인 시 자동 회원가입
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": [
+            "profile",
+            "email",
+        ],
+        "AUTH_PARAMS": {
+            "access_type": "online",
+        },
+    },
+    "github": {
+        "SCOPE": [
+            "user",
+            "email",
+        ],
+    },
+}
 
 # tinymce
 TINYMCE_DEFAULT_CONFIG = {
