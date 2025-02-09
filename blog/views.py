@@ -120,10 +120,19 @@ def upload_image(request, username):
     if request.method != "POST":
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
-    if "file" not in request.FILES:
+    print("\n==== Image Upload Debug ====")
+    print(f"Files in request: {request.FILES}")
+
+    # TinyMCE는 'images' 키를 사용
+    if 'images' not in request.FILES and 'file' not in request.FILES:
         return JsonResponse({"error": "No file uploaded"}, status=400)
 
-    file = request.FILES["file"]
+    # TinyMCE의 'images' 키나 일반적인 'file' 키 중 하나를 사용
+    file = request.FILES.get('images') or request.FILES.get('file')
+    print(f"File name: {file.name}")
+    print(f"File size: {file.size}")
+    print(f"Content type: {file.content_type}")
+
     if not file.content_type.startswith("image/"):
         return JsonResponse({"error": "File type not supported"}, status=400)
 
@@ -131,20 +140,110 @@ def upload_image(request, username):
     ext = file.name.split(".")[-1]
     filename = f"{uuid.uuid4()}.{ext}"
 
-    # 연/월 기반 폴더 구조 (blog/posts/images/YYYY/MM/)
+    # 연/월 기반 폴더 구조
     today = datetime.now()
     filepath = f"blog/posts/images/{today.year}/{today.month:02d}/{filename}"
 
     try:
         from django.core.files.storage import default_storage
-        from django.core.files.base import ContentFile
+        from django.conf import settings
+        import boto3
+        from botocore.client import Config
 
-        # MinIO에 파일 저장
-        filepath = default_storage.save(filepath, ContentFile(file.read()))
-        file_url = default_storage.url(filepath)
+        print("\n==== Storage Configuration ====")
+        print(f"Storage backend: {default_storage.__class__.__name__}")
+        print(f"MinIO endpoint URL: {settings.AWS_S3_ENDPOINT_URL}")
+        print(f"MinIO bucket name: {settings.AWS_STORAGE_BUCKET_NAME}")
+        print(f"AWS access key ID: {settings.AWS_ACCESS_KEY_ID}")
+        print(f"Target filepath: {filepath}")
+        
+        # MinIO 클라이언트 초기화
+        s3_client = boto3.client(
+            's3',
+            endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            config=Config(signature_version='s3v4'),
+            region_name='us-east-1',
+            verify=False
+        )
 
-        return JsonResponse({"location": file_url})
+        # 버킷 존재 여부 확인
+        try:
+            print("\n==== Checking Bucket ====")
+            s3_client.head_bucket(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+            print(f"Bucket '{settings.AWS_STORAGE_BUCKET_NAME}' exists and is accessible")
+            
+            # 버킷 내용물 나열
+            print("\n==== Current Bucket Contents ====")
+            response = s3_client.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+            for obj in response.get('Contents', []):
+                print(f"Found object: {obj['Key']}, Size: {obj['Size']} bytes")
+        except Exception as e:
+            print(f"Error checking bucket: {str(e)}")
+            # 버킷이 없으면 생성 시도
+            try:
+                print(f"Attempting to create bucket '{settings.AWS_STORAGE_BUCKET_NAME}'")
+                s3_client.create_bucket(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+                print("Bucket created successfully")
+            except Exception as create_error:
+                print(f"Error creating bucket: {str(create_error)}")
+                return JsonResponse({"error": f"Bucket error: {str(create_error)}"}, status=500)
+        
+        # 파일 저장
+        print("\n==== Saving File ====")
+        saved_path = default_storage.save(filepath, file)
+        print(f"Saved path: {saved_path}")
+        
+        # 직접 파일 업로드 시도
+        try:
+            print("\n==== Direct Upload Attempt ====")
+            file.seek(0)  # 파일 포인터를 처음으로 되돌림
+            s3_client.upload_fileobj(
+                file,
+                settings.AWS_STORAGE_BUCKET_NAME,
+                saved_path,
+                ExtraArgs={'ContentType': file.content_type}
+            )
+            print("Direct upload successful")
+        except Exception as upload_error:
+            print(f"Direct upload error: {str(upload_error)}")
+        
+        # 파일이 실제로 존재하는지 확인
+        try:
+            print("\n==== Verifying Upload ====")
+            print(f"Checking path: {saved_path}")
+            obj = s3_client.head_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=saved_path)
+            print(f"File exists in MinIO: Yes")
+            print(f"File size in MinIO: {obj['ContentLength']} bytes")
+            print(f"File content type: {obj['ContentType']}")
+            print(f"File metadata: {obj.get('Metadata', {})}")
+        except Exception as e:
+            print(f"Error verifying file in MinIO: {str(e)}")
+            # 파일 목록 다시 확인
+            try:
+                print("\n==== Updated Bucket Contents ====")
+                response = s3_client.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+                for obj in response.get('Contents', []):
+                    print(f"Found object: {obj['Key']}, Size: {obj['Size']} bytes")
+            except Exception as list_error:
+                print(f"Error listing bucket contents: {str(list_error)}")
+            return JsonResponse({"error": f"File verification failed: {str(e)}"}, status=500)
+        
+        # URL 생성 (버킷명 포함)
+        file_url = f"http://{settings.AWS_S3_CUSTOM_DOMAIN}/{settings.AWS_STORAGE_BUCKET_NAME}/{saved_path}"
+        print(f"\nGenerated URL: {file_url}")
+        
+        return JsonResponse({
+            "location": file_url,
+            "success": True
+        })
     except Exception as e:
+        import traceback
+        print(f"\n==== Error Details ====")
+        print(f"Error type: {type(e).__name__}")
+        print(f"Error message: {str(e)}")
+        print(f"Traceback:\n{traceback.format_exc()}")
         return JsonResponse({"error": str(e)}, status=500)
 
 

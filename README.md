@@ -22,6 +22,11 @@ JustDoLog는 개발자들을 위한 심플하고 강력한 블로깅 플랫폼�
     - [프로덕션 환경](#프로덕션-환경)
   - [기여하기](#기여하기)
   - [라이선스](#라이선스)
+  - [환경 설정](#환경-설정)
+    - [TinyMCE 설정](#tinymce-설정)
+    - [MinIO 설정 상세](#minio-설정-상세)
+    - [환경별 주요 차이점](#환경별-주요-차이점)
+    - [보안 주의사항](#보안-주의사항)
 
 ## 주요 기능
 - 마크다운 기반의 블로그 포스팅
@@ -198,8 +203,8 @@ docker-compose -f docker-compose.prod.yml exec web python manage.py collectstati
 | DB_PASSWORD | 데이터베이스 비밀번호 | - | Yes |
 | DB_HOST | 데이터베이스 호스트 | db | Yes |
 | DB_PORT | 데이터베이스 포트 | 5432 | Yes |
-| MINIO_ROOT_USER | MinIO 접근 키 | justdolog_minio | Yes |
-| MINIO_ROOT_PASSWORD | MinIO 시크릿 키 | - | Yes |
+| MINIO_ROOT_USER | MinIO 접근 키 | admin | Yes |
+| MINIO_ROOT_PASSWORD | MinIO 시크릿 키 | miniosecret | Yes |
 | MINIO_BUCKET_NAME | MinIO 버킷 이름 | justdolog-media | Yes |
 | MINIO_URL | MinIO 엔드포인트 URL | http://localhost:9000 | Yes |
 
@@ -227,13 +232,28 @@ docker-compose -f docker-compose.prod.yml up -d
 ```
 
 3. MinIO 콘솔 접속
-- 개발 환경: http://localhost:9001 (기본 계정: justdolog_minio / .env.dev 파일의 MINIO_ROOT_PASSWORD)
+- 개발 환경: http://localhost:9001
+  - 기본 계정: admin / miniosecret
+  - ⚠️ 보안을 위해 반드시 비밀번호를 변경하세요!
 - 프로덕션 환경: https://your-domain:9001
 
 ### 버킷 설정
-1. MinIO 콘솔에 접속
-2. 'Create Bucket' 버튼을 클릭하여 새 버킷 생성 (기본값: justdolog-media)
-3. 버킷의 Access Policy를 'public'으로 설정
+1. MinIO 콘솔에 접속 (http://localhost:9001)
+2. 기본 계정으로 로그인 (admin / miniosecret)
+3. 비밀번호 변경
+   - 우측 상단 프로필 메뉴 → Change Password
+   - 안전한 새 비밀번호로 변경
+4. 버킷은 자동으로 생성됩니다
+   - 기본 버킷 이름: justdolog-media
+   - 기본 접근 정책: public
+
+### 주의사항
+- 개발 환경의 기본 자격 증명 (admin / miniosecret)은 절대 프로덕션에서 사용하지 마세요
+- 프로덕션 환경에서는 반드시:
+  1. 강력한 비밀번호를 사용
+  2. HTTPS를 활성화
+  3. 적절한 버킷 정책을 설정
+  4. 정기적인 백업 구성
 
 ## Docker 사용하기
 
@@ -277,3 +297,43 @@ docker-compose -f docker-compose.prod.yml down
 
 ## 라이선스
 이 프로젝트는 MIT 라이선스를 따릅니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참고하세요.
+
+## 환경 설정
+
+### TinyMCE 설정
+- `SITE_URL`: 사이트 기본 URL (예: http://localhost:8000)
+- TinyMCE 이미지 업로드 설정
+  - 지원 파일 형식: jpg, svg, webp, png, gif
+  - 최대 파일 크기: 5MB
+
+### MinIO 설정 상세
+#### 개발 환경
+- SSL 비활성화
+- 공개 읽기 접근 (public-read)
+- 로컬 테스트용 설정
+
+#### 프로덕션 환경
+- SSL 활성화 필수
+- 보안 강화 설정
+  - ACL 제한
+  - HTTPS 필수
+  - 적절한 CORS 설정
+
+### 환경별 주요 차이점
+| 설정 | 개발 환경 | 프로덕션 환경 |
+|------|-----------|---------------|
+| SSL | 비활성화 | 활성화 |
+| ACL | public-read | 제한적 |
+| 도메인 | localhost:9000 | minio.도메인명 |
+| 보안 | 최소화 | 강화 |
+
+### 보안 주의사항
+1. 프로덕션 환경 설정 시 주의사항
+   - 기본 자격증명 변경 필수
+   - SSL/TLS 인증서 설정
+   - 적절한 버킷 정책 설정
+   - 접근 로그 활성화
+2. 파일 업로드 보안
+   - 파일 크기 제한 (기본 5MB)
+   - 허용된 파일 형식만 업로드
+   - 악성 파일 검사 고려

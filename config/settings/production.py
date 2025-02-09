@@ -14,12 +14,20 @@ STATIC_URL = "static/"
 DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 AWS_ACCESS_KEY_ID = os.getenv("MINIO_ROOT_USER")
 AWS_SECRET_ACCESS_KEY = os.getenv("MINIO_ROOT_PASSWORD")
-AWS_STORAGE_BUCKET_NAME = os.getenv("MINIO_BUCKET_NAME")
-AWS_S3_ENDPOINT_URL = f"http://{os.getenv('MINIO_ENDPOINT')}"
-AWS_S3_USE_SSL = os.getenv("MINIO_USE_SSL", "False").lower() == "true"
+AWS_STORAGE_BUCKET_NAME = os.getenv("MINIO_BUCKET_NAME", "justdolog-media")
+AWS_S3_ENDPOINT_URL = os.getenv("MINIO_URL", "http://minio:9000")
+AWS_S3_CUSTOM_DOMAIN = f"minio.{ALLOWED_HOSTS[0]}/justdolog-media" if ALLOWED_HOSTS else None
+
+AWS_DEFAULT_ACL = None
 AWS_QUERYSTRING_AUTH = False
 AWS_S3_FILE_OVERWRITE = False
-AWS_DEFAULT_ACL = "public-read"
+
+# 추가 MinIO 설정
+AWS_S3_VERIFY = True  # 프로덕션 환경에서는 SSL 검증 활성화
+AWS_S3_USE_SSL = True  # 프로덕션 환경에서는 HTTPS 사용
+AWS_S3_ADDRESSING_STYLE = "path"
+AWS_S3_SIGNATURE_VERSION = "s3v4"
+AWS_S3_REGION_NAME = "us-east-1"
 
 # File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB

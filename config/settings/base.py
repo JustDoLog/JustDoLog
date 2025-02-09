@@ -181,48 +181,32 @@ TINYMCE_DEFAULT_CONFIG = {
     "width": "100%",
     "menubar": "file edit view insert format tools table help",
     "plugins": (
-        "advlist autolink lists link image imagetools charmap print preview anchor searchreplace "
-        "visualblocks code fullscreen insertdatetime media table paste code help wordcount spellchecker "
-        "file quickbars emoticons"
+        "advlist autolink lists link image charmap preview anchor searchreplace "
+        "visualblocks code fullscreen insertdatetime media table code help wordcount "
+        "quickbars emoticons"
     ),
     "toolbar": (
         "undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | "
-        "alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist checklist | "
+        "alignleft aligncenter alignright alignjustify | outdent indent |  numlist bullist | "
         "forecolor backcolor casechange permanentpen formatpainter removeformat | pagebreak | "
-        "charmap emoticons | fullscreen  preview save print | insertfile image media pageembed template "
-        "link anchor codesample | a11ycheck ltr rtl | showcomments addcomment code"
+        "charmap emoticons | fullscreen preview | insertfile image media pageembed template "
+        "link anchor codesample | code"
     ),
     "custom_undo_redo_levels": 10,
     "language": "ko_KR",
     # 이미지 업로드 관련 설정
     "images_upload_url": "upload_image",
     "automatic_uploads": True,
-    "images_reuse_filename": True,
+    "images_reuse_filename": False,
     "file_picker_types": "image",
     "images_file_types": "jpg,svg,webp,png,gif",
     "image_advtab": True,
     "image_uploadtab": True,
-    "file_picker_callback": """
-        function(callback, value, meta) {
-            var input = document.createElement('input');
-            input.setAttribute('type', 'file');
-            input.setAttribute('accept', 'image/*');
-            input.onchange = function() {
-                var file = this.files[0];
-                var reader = new FileReader();
-                reader.readAsDataURL(file);
-                reader.onload = function() {
-                    var id = 'blobid' + (new Date()).getTime();
-                    var blobCache = tinymce.activeEditor.editorUpload.blobCache;
-                    var base64 = reader.result.split(',')[1];
-                    var blobInfo = blobCache.create(id, file, base64);
-                    blobCache.add(blobInfo);
-                    callback(blobInfo.blobUri(), { title: file.name });
-                };
-            };
-            input.click();
-        }
-    """,
+    # URL 관련 설정
+    "relative_urls": False,
+    "remove_script_host": True,
+    "document_base_url": os.getenv("SITE_URL", "http://localhost:8000"),
+    "convert_urls": True,
     # 기존 스타일 설정 유지
     "content_style": """
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
@@ -262,3 +246,22 @@ TINYMCE_DEFAULT_CONFIG = {
         }
     """,
 }
+
+# MinIO 공통 설정
+MINIO_SETTINGS = {
+    "DEFAULT_FILE_STORAGE": "storages.backends.s3boto3.S3Boto3Storage",
+    "AWS_ACCESS_KEY_ID": os.getenv("MINIO_ROOT_USER"),
+    "AWS_SECRET_ACCESS_KEY": os.getenv("MINIO_ROOT_PASSWORD"),
+    "AWS_STORAGE_BUCKET_NAME": os.getenv("MINIO_BUCKET_NAME", "justdolog-media"),
+    "AWS_S3_ENDPOINT_URL": os.getenv("MINIO_URL", "http://minio:9000"),
+    "AWS_S3_ADDRESSING_STYLE": "path",
+    "AWS_S3_SIGNATURE_VERSION": "s3v4",
+    "AWS_S3_REGION_NAME": "us-east-1",
+    "AWS_QUERYSTRING_AUTH": False,
+    "AWS_S3_FILE_OVERWRITE": False,
+    "FILE_UPLOAD_MAX_MEMORY_SIZE": 5 * 1024 * 1024,
+    "MAX_UPLOAD_SIZE": 5 * 1024 * 1024,
+}
+
+# MinIO 설정 적용
+globals().update(MINIO_SETTINGS)
