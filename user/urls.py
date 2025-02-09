@@ -5,7 +5,6 @@ from . import views
 urlpatterns = [
     path("profile/", views.ProfileView.as_view(), name="profile"),
     path("follow/<str:username>/", views.FollowUserView.as_view(), name="follow_user"),
-    path("unfollow/<str:username>/", views.UnfollowUserView.as_view(), name="unfollow_user"),
     path("profile/update/", views.update_profile, name="update_profile"),
     path("profile/upload-image/", views.upload_profile_image, name="upload_profile_image"),
     path("profile/remove-image/", views.remove_profile_image, name="remove_profile_image"),

@@ -5,10 +5,12 @@ from django.urls import reverse, reverse_lazy
 from django.http import JsonResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
+from django.db import models
 import uuid
 from datetime import datetime
-from .models import Blog, Post
-from user.models import CustomUser
+from .models import Blog, Post, PostRead
+from user.models import CustomUser, Follow
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 
 
 class BlogOwnerRequiredMixin(UserPassesTestMixin):
@@ -34,15 +36,43 @@ class UserBlogMainView(DetailView):
     model = Blog
     template_name = "blog/user_blog_main.html"
     context_object_name = "blog"
+    paginate_by = 10
 
     def get_object(self):
-        user = get_object_or_404(CustomUser, username=self.kwargs["username"])
-        return get_object_or_404(Blog, owner=user)
+        return get_object_or_404(Blog, owner__username=self.kwargs["username"])
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["posts"] = context["blog"].posts.filter(status="published").order_by("-created_at")
-        context["is_owner"] = self.request.user == context["blog"].owner
+        
+        # 현재 사용자가 블로그 소유자인 경우 draft 포함, 아닌 경우 published만
+        if self.request.user == self.object.owner:
+            posts = Post.objects.filter(blog=self.object)
+        else:
+            posts = Post.objects.filter(blog=self.object, status="published")
+            
+        posts = posts.order_by("-created_at")
+        
+        # 페이지네이션 처리
+        paginator = Paginator(posts, self.paginate_by)
+        page = self.request.GET.get('page')
+        
+        try:
+            posts = paginator.page(page)
+        except PageNotAnInteger:
+            posts = paginator.page(1)
+        except EmptyPage:
+            posts = paginator.page(paginator.num_pages)
+        
+        context["posts"] = posts
+        context["is_paginated"] = True
+        context["page_obj"] = posts
+        
+        # 팔로우 상태 확인
+        if self.request.user.is_authenticated and self.request.user != self.object.owner:
+            context["is_following"] = Follow.objects.filter(
+                follower=self.request.user, following=self.object.owner
+            ).exists()
+            
         return context
 
 
@@ -56,14 +86,35 @@ class UserPostDetailView(PostGetObjectMixin, DetailView):
         # draft 상태의 글은 작성자만 볼 수 있음
         if post.status == "draft" and post.blog.owner != self.request.user:
             raise Http404("이 글을 볼 수 있는 권한이 없습니다.")
+        
+        # 조회수 증가 로직
+        if self.request.user.is_authenticated:
+            # 자신의 글은 조회수를 증가시키지 않음
+            if post.author != self.request.user:
+                post_read, created = PostRead.objects.get_or_create(
+                    user=self.request.user,
+                    post=post
+                )
+                
+                # 새로운 조회인 경우에만 조회수 증가
+                if created:
+                    Post.objects.filter(pk=post.pk).update(views=models.F('views') + 1)
+                    post = Post.objects.get(pk=post.pk)  # 업데이트된 객체 다시 조회
+        else:
+            # 비로그인 사용자는 항상 조회수 증가
+            Post.objects.filter(pk=post.pk).update(views=models.F('views') + 1)
+            post = Post.objects.get(pk=post.pk)  # 업데이트된 객체 다시 조회
+        
         return post
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["is_owner"] = self.request.user == context["post"].blog.owner
         context["is_following"] = False
+        context["has_liked"] = False
         if self.request.user.is_authenticated:
             context["is_following"] = self.request.user.following.filter(following=context["post"].blog.owner).exists()
+            context["has_liked"] = self.request.user.liked_posts.filter(pk=context["post"].pk).exists()
         return context
 
 
@@ -263,3 +314,35 @@ class UserPostDraftListView(LoginRequiredMixin, ListView):
         context = super().get_context_data(**kwargs)
         context["blog"] = Blog.objects.get(owner=self.request.user)
         return context
+
+
+@login_required
+def toggle_like(request, username, slug):
+    """포스트 좋아요 토글 뷰"""
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+    post = get_object_or_404(Post, blog__owner__username=username, slug=slug)
+    
+    # 자신의 글은 좋아요 불가
+    if post.author == request.user:
+        return JsonResponse({"error": "자신의 글은 좋아요할 수 없습니다."}, status=400)
+    
+    # 좋아요 토글
+    if post.liked_by.filter(pk=request.user.pk).exists():
+        post.liked_by.remove(request.user)
+        post.likes = models.F('likes') - 1
+        liked = False
+    else:
+        post.liked_by.add(request.user)
+        post.likes = models.F('likes') + 1
+        liked = True
+    
+    post.save(update_fields=['likes'])
+    # F() 표현식으로 인한 값 갱신을 위해 다시 조회
+    post.refresh_from_db()
+    
+    return JsonResponse({
+        "liked": liked,
+        "likes_count": post.likes
+    })

@@ -18,6 +18,7 @@
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <!-- Alpine.js -->
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('layout', () => ({
@@ -170,6 +171,7 @@
         .btn-mobile-secondary:hover {
             background-color: #f8f9fa;
         }
+        [x-cloak] { display: none !important; }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
@@ -247,6 +249,7 @@
                             
                             <!-- 드롭다운 메뉴 -->
                             <div x-show="open" 
+                                 x-cloak
                                  x-transition 
                                  class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1">
                                 <a href="{% url 'user_blog_main' username=user.username %}" 

@@ -176,7 +176,6 @@ cython_debug/
 docker-compose.override.yml
 
 # Project specific
-static/
 staticfiles/
 media/
 postgres_data/

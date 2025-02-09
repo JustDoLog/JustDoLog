@@ -20,21 +20,34 @@ class FollowUserView(LoginRequiredMixin, View):
         
         # 자기 자신을 팔로우할 수 없음
         if request.user == user_to_follow:
-            return HttpResponseRedirect(reverse('user_blog_main', kwargs={'username': username}))
+            return HttpResponse(status=400)
         
-        # 이미 팔로우한 경우 무시
-        Follow.objects.get_or_create(follower=request.user, following=user_to_follow)
+        # 이미 팔로우한 경우 언팔로우
+        follow, created = Follow.objects.get_or_create(follower=request.user, following=user_to_follow)
         
-        return HttpResponseRedirect(reverse('user_blog_main', kwargs={'username': username}))
-
-class UnfollowUserView(LoginRequiredMixin, View):
-    def post(self, request, username):
-        user_to_unfollow = get_object_or_404(User, username=username)
+        if not created:  # 이미 팔로우 중이었다면 삭제
+            follow.delete()
         
-        # 팔로우 관계가 있으면 삭제
-        Follow.objects.filter(follower=request.user, following=user_to_unfollow).delete()
+        # 팔로워 수 조회
+        followers_count = user_to_follow.followers.count()
         
-        return HttpResponseRedirect(reverse('user_blog_main', kwargs={'username': username}))
+        # HTMX 응답 반환
+        button_html = f'''
+        <div class="flex-shrink-0" id="follow-button-{username}">
+            <button hx-post="{reverse('follow_user', kwargs={'username': username})}"
+                    hx-swap="outerHTML"
+                    hx-target="#follow-button-{username}"
+                    hx-headers='{{"X-CSRFToken": "{request.META.get('CSRF_COOKIE')}"}}' 
+                    class="{'bg-gray-900 text-white hover:bg-gray-800' if created else 'text-gray-900 bg-white border border-gray-900 hover:bg-gray-50'} px-6 py-2 text-sm font-medium rounded-full transition-colors">
+                {'팔로잉' if created else '팔로우'}
+            </button>
+        </div>
+        <div hx-swap-oob="true" id="followers-count-{username}">
+            팔로워 {followers_count}명
+        </div>
+        '''
+        
+        return HttpResponse(button_html)
 
 @login_required
 @require_POST

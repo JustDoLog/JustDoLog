@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 {% load static %}
 
+{% block extra_head %}
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script src="{% static 'js/like-handler.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="container mx-auto px-4 py-8 max-w-[1000px]">
     <!-- 메인 네비게이션 -->
@@ -9,15 +14,15 @@
             <!-- 일반 메뉴 -->
             <div class="flex items-center space-x-8">
                 <a href="{% url 'trending_day' %}" 
-                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'trending_day' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'trending_day' %}text-gray-900 border-gray-900{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
                     트렌딩
                 </a>
                 <a href="{% url 'recent_posts' %}" 
-                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'recent_posts' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'recent_posts' %}text-gray-900 border-gray-900{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
                     최신
                 </a>
                 <a href="{% url 'popular_bloggers' %}" 
-                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'popular_bloggers' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'popular_bloggers' %}text-gray-900 border-gray-900{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
                     인기 블로거
                 </a>
             </div>
@@ -29,15 +34,15 @@
             {% if user.is_authenticated %}
             <div class="flex items-center space-x-8">
                 <a href="{% url 'liked_posts' %}" 
-                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'liked_posts' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'liked_posts' %}text-gray-900 border-gray-900{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
                     좋아요한 글
                 </a>
                 <a href="{% url 'recent_read_posts' %}" 
-                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'recent_read_posts' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'recent_read_posts' %}text-gray-900 border-gray-900{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
                     최근 읽은 글
                 </a>
                 <a href="{% url 'following_posts' %}" 
-                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'following_posts' %}text-primary border-primary{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
+                   class="py-4 text-sm font-medium border-b-2 {% if request.resolver_match.url_name == 'following_posts' %}text-gray-900 border-gray-900{% else %}text-gray-500 border-transparent hover:text-gray-900 hover:border-gray-200{% endif %} transition-colors">
                     팔로잉
                 </a>
             </div>
@@ -72,15 +77,16 @@
                                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
                                 </svg>
                             {% endif %}
-                            <span class="ml-3 text-sm font-medium text-gray-900 group-hover:text-primary">
+                            <span class="ml-3 text-sm font-medium text-gray-900 group-hover:underline">
                                 {{ post.blog.owner.username }}
                             </span>
                         </a>
                     </div>
 
                     <!-- 제목 -->
-                    <h2 class="text-xl font-bold mb-2 text-gray-900 hover:text-primary transition-colors">
-                        <a href="{% url 'user_post_detail' username=post.blog.owner.username slug=post.slug %}">
+                    <h2 class="text-xl font-bold mb-2">
+                        <a href="{% url 'user_post_detail' username=post.blog.owner.username slug=post.slug %}"
+                           class="text-gray-900 hover:underline">
                             {{ post.title }}
                         </a>
                     </h2>
@@ -95,23 +101,32 @@
                         <div class="flex items-center space-x-4">
                             <span>{{ post.created_at|date:"Y년 m월 d일" }}</span>
                             <span>조회수 {{ post.views }}</span>
-                            <span>좋아요 {{ post.likes }}</span>
+                            <span class="post-likes-count">좋아요 {{ post.likes }}</span>
                             {% if post.tags.all %}
                             <div class="flex items-center space-x-2">
                                 {% for tag in post.tags.all|slice:":3" %}
-                                <a href="#" class="hover:text-primary">#{{ tag.name }}</a>
+                                <a href="#" class="text-gray-500 hover:underline">#{{ tag.name }}</a>
                                 {% endfor %}
                             </div>
                             {% endif %}
                         </div>
                         
                         <!-- 좋아요 버튼 -->
-                        <button class="flex items-center text-gray-500 hover:text-primary transition-colors">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button class="like-button flex items-center text-gray-500 hover:text-gray-900 transition-colors {% if post in user.liked_posts.all %}text-gray-900{% endif %}"
+                                {% if user.is_authenticated %}
+                                    hx-post="{% url 'toggle_like' username=post.blog.owner.username slug=post.slug %}"
+                                    hx-swap="none"
+                                    hx-trigger="click"
+                                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                {% else %}
+                                    onclick="window.location.href='{% url 'account_login' %}?next={{ request.path }}'"
+                                {% endif %}>
+                            <svg class="w-5 h-5" fill="{% if post in user.liked_posts.all %}currentColor{% else %}none{% endif %}" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
                                       d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
                                 </path>
                             </svg>
+                            <span class="likes-count ml-1">{{ post.likes }}</span>
                         </button>
                     </div>
                 </div>
@@ -158,5 +173,8 @@
         </nav>
     </div>
     {% endif %}
+
+    <!-- JavaScript for handling likes -->
+    <script src="{% static 'js/like-handler.js' %}"></script>
 </div>
 {% endblock %}

@@ -39,4 +39,9 @@ urlpatterns = [
         views.UserPostDeleteView.as_view(),
         name="user_post_delete",
     ),
+    re_path(
+        r"^@(?P<username>[^/]+)/posts/(?P<slug>[-\w가-힣]+)/like/$",
+        views.toggle_like,
+        name="toggle_like",
+    ),
 ]

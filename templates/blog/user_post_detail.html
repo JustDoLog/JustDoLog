@@ -5,6 +5,11 @@
 {% block og_title %}{{ post.title }}{% endblock %}
 {% block og_description %}{{ post.content|striptags|safe|truncatechars:150 }}{% endblock %}
 
+{% block extra_head %}
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script src="{% static 'js/like-handler.js' %}"></script>
+{% endblock %}
+
 {% block content %}
 <div class="container mx-auto px-4 py-8 max-w-[800px]">
     <!-- 포스트 제목 -->
@@ -30,38 +35,31 @@
             </a>
 
             <!-- 작성자 정보 -->
-            <div class="flex items-center gap-4">
+            <div class="flex flex-col gap-2">
                 <a href="{% url 'user_blog_main' username=post.blog.owner.username %}" 
-                   class="text-base font-medium text-gray-900 hover:text-primary transition-colors">
+                   class="text-base font-medium text-gray-900 hover:underline">
                     {{ post.blog.owner.username }}
                 </a>
-
-                <!-- 팔로우 버튼 -->
-                {% if user.is_authenticated and user != post.blog.owner %}
-                    {% if is_following %}
-                        <form method="post" action="{% url 'unfollow_user' username=post.blog.owner.username %}" class="inline">
-                            {% csrf_token %}
-                            <button type="submit" 
-                                    class="px-4 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-full hover:bg-gray-50 transition-colors">
-                                팔로잉
-                            </button>
-                        </form>
-                    {% else %}
-                        <form method="post" action="{% url 'follow_user' username=post.blog.owner.username %}" class="inline">
-                            {% csrf_token %}
-                            <button type="submit" 
-                                    class="px-4 py-1.5 text-sm font-medium text-white bg-primary rounded-full hover:bg-primary-hover transition-colors">
-                                팔로우
-                            </button>
-                        </form>
-                    {% endif %}
-                {% endif %}
 
                 <!-- 작성일 -->
                 <span class="text-sm text-gray-500">
                     {{ post.created_at|date:"Y년 m월 d일" }}
                 </span>
             </div>
+
+            <!-- 팔로우 버튼 -->
+            {% if user.is_authenticated and user != post.blog.owner %}
+                <button hx-post="{% url 'follow_user' username=post.blog.owner.username %}"
+                        hx-swap="outerHTML"
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                        class="{% if is_following %}bg-gray-900 text-white hover:bg-gray-800{% else %}text-gray-900 bg-white border border-gray-900 hover:bg-gray-50{% endif %} px-6 py-2 text-sm font-medium rounded-full transition-colors">
+                    {% if is_following %}
+                        팔로잉
+                    {% else %}
+                        팔로우
+                    {% endif %}
+                </button>
+            {% endif %}
         </div>
     </div>
 
@@ -82,7 +80,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
                           d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
                 </svg>
-                <span>{{ post.likes }}</span>
+                <span class="post-likes-count">{{ post.likes }}</span>
             </div>
             <div class="flex items-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,11 +92,20 @@
         </div>
 
         <!-- 좋아요 버튼 -->
-        <button class="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button class="like-button flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors {% if has_liked %}text-gray-900{% endif %}"
+                {% if user.is_authenticated %}
+                    hx-post="{% url 'toggle_like' username=post.blog.owner.username slug=post.slug %}"
+                    hx-swap="none"
+                    hx-trigger="click"
+                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                {% else %}
+                    onclick="window.location.href='{% url 'account_login' %}?next={{ request.path }}'"
+                {% endif %}>
+            <svg class="w-6 h-6" fill="{% if has_liked %}currentColor{% else %}none{% endif %}" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
                       d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
             </svg>
+            <span class="likes-count">{{ post.likes }}</span>
         </button>
     </div>
 
@@ -118,4 +125,7 @@
     </div>
     {% endif %}
 </div>
+
+<!-- JavaScript for handling likes -->
+<script src="{% static 'js/like-handler.js' %}"></script>
 {% endblock %}
