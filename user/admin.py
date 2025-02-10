@@ -19,12 +19,10 @@ class CustomUserAdmin(UserAdmin):
             {
                 "fields": (
                     "profile_image",
-                    "nickname",
-                    "bio",
-                    "github",
-                    "twitter",
-                    "facebook",
-                    "homepage",
+                    "github_url",
+                    "twitter_url",
+                    "facebook_url",
+                    "homepage_url",
                 )
             },
         ),
@@ -36,12 +34,10 @@ class CustomUserAdmin(UserAdmin):
             {
                 "fields": (
                     "profile_image",
-                    "nickname",
-                    "bio",
-                    "github",
-                    "twitter",
-                    "facebook",
-                    "homepage",
+                    "github_url",
+                    "twitter_url",
+                    "facebook_url",
+                    "homepage_url",
                 )
             },
         ),

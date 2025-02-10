@@ -63,42 +63,18 @@ def upload_profile_image(request):
         
         if not file.content_type.startswith("image/"):
             return HttpResponse("Invalid file type", status=400)
-            
-        # 파일 이름 생성 (UUID + 원본 확장자)
-        ext = file.name.split(".")[-1]
-        filename = f"{uuid.uuid4()}.{ext}"
-        filepath = f"user/profiles/images/{filename}"
         
-        try:
-            # MinIO 클라이언트 초기화
-            s3_client = boto3.client(
-                's3',
-                endpoint_url=settings.AWS_S3_ENDPOINT_URL,
-                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-                config=Config(signature_version='s3v4'),
-                region_name='us-east-1',
-                verify=False
-            )
-            
-            # 파일 저장
-            saved_path = default_storage.save(filepath, file)
-            
-            # 기존 이미지 삭제
-            if request.user.profile_image:
-                request.user.profile_image.delete()
-            
-            # URL 생성 및 저장
-            file_url = f"http://localhost:9000/{settings.AWS_STORAGE_BUCKET_NAME}/{saved_path}"
-            request.user.profile_image_url = file_url
-            request.user.save()
-            
-            # 업데이트된 프로필 이미지 섹션 반환
-            html = render_to_string('account/partials/profile_image.html', {'user': request.user})
-            return HttpResponse(html)
-            
-        except Exception as e:
-            return HttpResponse(str(e), status=500)
+        # 기존 이미지 삭제
+        if request.user.profile_image:
+            request.user.profile_image.delete()
+        
+        # 새 이미지 저장
+        request.user.profile_image = file
+        request.user.save()
+        
+        # 업데이트된 프로필 이미지 섹션 반환
+        html = render_to_string('account/partials/profile_image.html', {'user': request.user})
+        return HttpResponse(html)
             
     return HttpResponse(status=400)
 
@@ -109,8 +85,6 @@ def remove_profile_image(request):
     if user.profile_image:
         user.profile_image.delete()
         user.profile_image = None
-    if user.profile_image_url:
-        user.profile_image_url = None
     user.save()
     
     # Return the updated profile image section
@@ -184,3 +158,55 @@ def account_delete(request):
         messages.success(request, "계정이 성공적으로 삭제되었습니다.")
         return redirect("trending_day")
     return render(request, "account/account_delete.html")
+
+@login_required
+@require_POST
+def toggle_social_edit(request):
+    """소셜 정보 수정 모드 토글"""
+    return render(request, 'account/partials/social_info.html', {
+        'is_edit_mode': True
+    })
+
+@login_required
+@require_POST
+def update_social_info(request):
+    """소셜 정보 업데이트"""
+    user = request.user
+    user.github_url = request.POST.get('github_url', '')
+    user.twitter_url = request.POST.get('twitter_url', '')
+    user.facebook_url = request.POST.get('facebook_url', '')
+    user.homepage_url = request.POST.get('homepage_url', '')
+    user.save()
+
+    return render(request, 'account/partials/social_info.html', {
+        'is_edit_mode': False
+    })
+
+@login_required
+def profile_edit(request):
+    if request.method == "POST":
+        user = request.user
+        
+        # 프로필 이미지 처리
+        if 'profile_image' in request.FILES:
+            if user.profile_image:
+                user.profile_image.delete()
+            user.profile_image = request.FILES['profile_image']
+        
+        # 소셜 URL 업데이트
+        user.github_url = request.POST.get('github_url', '')
+        user.twitter_url = request.POST.get('twitter_url', '')
+        user.facebook_url = request.POST.get('facebook_url', '')
+        user.homepage_url = request.POST.get('homepage_url', '')
+        
+        # 블로그 정보 업데이트
+        if hasattr(user, 'blog'):
+            user.blog.title = request.POST.get('blog_title', '')
+            user.blog.description = request.POST.get('blog_description', '')
+            user.blog.save()
+        
+        user.save()
+        messages.success(request, '프로필이 성공적으로 업데이트되었습니다.')
+        return redirect('profile')
+        
+    return render(request, 'account/profile_edit.html')

@@ -1,13 +1,43 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.core.exceptions import ValidationError
+from django.core.validators import URLValidator
 import uuid
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from allauth.socialaccount.models import SocialAccount
-from urllib.request import urlretrieve
-from django.core.files import File
-import tempfile
-import os
+from PIL import Image
+import io
+
+
+def validate_image_size(file):
+    """이미지 파일 크기 검증"""
+    # 5MB 제한
+    max_size = 5 * 1024 * 1024
+    if file.size > max_size:
+        raise ValidationError('이미지 크기는 5MB를 초과할 수 없습니다.')
+
+
+def validate_image(file):
+    """이미지 파일 유효성 검사"""
+    if file:
+        try:
+            # 파일 크기 검증
+            validate_image_size(file)
+            # 파일 포인터를 처음으로 되돌림
+            file.seek(0)
+            img = Image.open(io.BytesIO(file.read()))
+            img.verify()  # 이미지 파일 검증
+            file.seek(0)  # 파일 포인터를 다시 처음으로
+            return file
+        except Exception:
+            raise ValidationError("유효한 이미지 파일이 아닙니다.")
+
+
+def validate_url(value):
+    """URL 유효성 검사"""
+    validator = URLValidator(
+        schemes=['http', 'https'],
+        message='올바른 URL을 입력해주세요. (예: https://example.com)'
+    )
+    validator(value)
 
 
 def profile_image_path(instance, filename):
@@ -32,18 +62,28 @@ class CustomUser(AbstractUser):
         null=True,
         blank=True,
         verbose_name="프로필 이미지",
+        validators=[validate_image]
     )
-    profile_image_url = models.URLField(
+    github_url = models.URLField(
+        max_length=200,
         blank=True,
-        null=True,
-        verbose_name="프로필 이미지 URL"
+        validators=[validate_url]
     )
-    nickname = models.CharField(max_length=100, blank=True)
-    bio = models.CharField(max_length=255, blank=True)
-    github = models.URLField(blank=True)
-    twitter = models.URLField(blank=True)
-    facebook = models.URLField(blank=True)
-    homepage = models.URLField(blank=True)
+    twitter_url = models.URLField(
+        max_length=200,
+        blank=True,
+        validators=[validate_url]
+    )
+    facebook_url = models.URLField(
+        max_length=200,
+        blank=True,
+        validators=[validate_url]
+    )
+    homepage_url = models.URLField(
+        max_length=200,
+        blank=True,
+        validators=[validate_url]
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -54,30 +94,17 @@ class CustomUser(AbstractUser):
     def __str__(self):
         return self.username
     
-    def follow(self, user):
-        if user != self:
-            Follow.objects.get_or_create(follower=self, following=user)
-
-    def unfollow(self, user):
-        Follow.objects.filter(follower=self, following=user).delete()
-
-    def is_following(self, user):
-        return self.following.filter(following=user).exists()
-
-    def get_followers_count(self):
-        return self.followers.count()
-
-    def get_following_count(self):
-        return self.following.count()    
-
     @property
     def get_profile_image(self):
-        """프로필 이미지 URL 반환 (로컬 이미지 또는 소셜 이미지)"""
+        """프로필 이미지 URL 반환"""
         if self.profile_image:
             return self.profile_image.url
-        elif self.profile_image_url:
-            return self.profile_image_url
         return None
+
+    def save(self, *args, **kwargs):
+        if self.profile_image:
+            validate_image(self.profile_image)
+        super().save(*args, **kwargs)
 
 
 class Follow(models.Model):
@@ -99,20 +126,14 @@ class Follow(models.Model):
             )
         ]
 
+    def clean(self):
+        if self.follower == self.following:
+            raise ValidationError("자기 자신을 팔로우할 수 없습니다.")
+        super().clean()
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.follower.username} follows {self.following.username}"    
-
-
-@receiver(post_save, sender=SocialAccount)
-def save_profile_image_url(sender, instance, created, **kwargs):
-    if created:
-        user = instance.user
-        if not user.profile_image and not user.profile_image_url:
-            if instance.provider == 'google':
-                picture_url = instance.extra_data.get('picture')
-            elif instance.provider == 'github':
-                picture_url = instance.extra_data.get('avatar_url')
-            
-            if picture_url:
-                user.profile_image_url = picture_url
-                user.save()    

@@ -11,4 +11,7 @@ urlpatterns = [
     path("profile/toggle-edit/", views.toggle_edit_mode, name="toggle_edit_mode"),
     path("profile/form/", views.profile_form, name="profile_form"),
     path("delete/", views.account_delete, name="account_delete"),
+    path("profile/toggle-social-edit/", views.toggle_social_edit, name="toggle_social_edit"),
+    path("profile/update-social-info/", views.update_social_info, name="update_social_info"),
+    path("profile/edit/", views.profile_edit, name="profile_edit"),
 ]
