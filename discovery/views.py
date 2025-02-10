@@ -8,7 +8,7 @@ from django.contrib.postgres.search import SearchQuery
 from django.conf import settings
 from django.db import models
 from datetime import timedelta
-from blog.models import Post, Blog
+from blog.models import Post, Blog, PostLike, PostRead
 from user.models import Follow
 
 
@@ -20,26 +20,14 @@ class TrendingPostsView(ListView):
 
     def get_queryset(self):
         period = self.request.GET.get("period", "day")
-        today = timezone.now().date()
+        days = {
+            "day": 1,
+            "week": 7,
+            "month": 30,
+            "year": 365
+        }.get(period, 1)
         
-        # 기본 쿼리셋: published 상태인 게시글
-        queryset = Post.objects.filter(status="published")
-        
-        # 기간별 필터링
-        if period == "day":
-            queryset = queryset.filter(updated_at__date=today)
-        elif period == "week":
-            start_date = today - timedelta(days=7)
-            queryset = queryset.filter(updated_at__date__gte=start_date)
-        elif period == "month":
-            start_date = today - timedelta(days=30)
-            queryset = queryset.filter(updated_at__date__gte=start_date)
-        else:  # year
-            start_date = today - timedelta(days=365)
-            queryset = queryset.filter(updated_at__date__gte=start_date)
-        
-        # 좋아요 순, 최신순으로 정렬
-        return queryset.order_by("-likes", "-updated_at")
+        return Post.objects.trending(days=days)
 
 
 class RecentPostsView(ListView):
@@ -49,7 +37,7 @@ class RecentPostsView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        return Post.objects.filter(status="published").order_by("-updated_at")
+        return Post.objects.published().order_by("-created_at")
 
 
 class LikedPostsView(LoginRequiredMixin, ListView):
@@ -59,9 +47,9 @@ class LikedPostsView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        return Post.objects.filter(
-            postlike__user=self.request.user, status="published"
-        ).order_by("-postlike__created_at")
+        # PostLike 매니저를 사용하여 사용자의 좋아요 목록 조회
+        likes = PostLike.objects.get_user_likes(self.request.user)
+        return [like.post for like in likes if like.post.status == "published"]
 
 
 class RecentReadPostsView(LoginRequiredMixin, ListView):
@@ -71,9 +59,9 @@ class RecentReadPostsView(LoginRequiredMixin, ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        return Post.objects.filter(
-            postread__user=self.request.user, status="published"
-        ).order_by("-postread__updated_at")
+        # PostRead 매니저를 사용하여 사용자의 최근 읽은 글 목록 조회
+        reads = PostRead.objects.get_user_reads(self.request.user)
+        return [read.post for read in reads if read.post.status == "published"]
 
 
 class PopularBloggersView(ListView):
@@ -81,32 +69,8 @@ class PopularBloggersView(ListView):
     context_object_name = 'bloggers'
 
     def get_queryset(self):
-        # 최근 30일 동안의 활동을 기준으로 인기 블로거 선정
-        thirty_days_ago = timezone.now() - timedelta(days=30)
-        
-        queryset = Blog.objects.annotate(
-            # 팔로워 수
-            followers_count=Count('owner__followers'),
-            # 최근 30일 동안 작성한 게시글 수
-            recent_posts_count=Count(
-                'posts',
-                filter=models.Q(posts__updated_at__gte=thirty_days_ago)
-            ),
-            # 최근 30일 동안 받은 좋아요 수
-            recent_likes_count=Count(
-                'posts__postlike',
-                filter=models.Q(posts__postlike__created_at__gte=thirty_days_ago)
-            ),
-            # 인기도 점수 계산
-            popularity_score=ExpressionWrapper(
-                # 팔로워 수 * 2 + 최근 게시글 수 * 3 + 최근 좋아요 수
-                F('followers_count') * 2 + F('recent_posts_count') * 3 + F('recent_likes_count'),
-                output_field=FloatField()
-            )
-        ).filter(
-            # 최소 1개 이상의 게시글이 있는 블로그만 선정
-            posts__isnull=False
-        ).distinct().order_by('-popularity_score')[:10]
+        # 새로운 BlogManager의 popular() 메서드 사용
+        queryset = Blog.objects.popular()[:10]
 
         # 로그인한 사용자의 팔로잉 정보를 prefetch
         if self.request.user.is_authenticated:
@@ -143,20 +107,14 @@ class SearchView(ListView):
         if not query:
             return Post.objects.none()
 
-        # 기본 필터: published 상태인 게시글만
-        base_queryset = Post.objects.filter(status="published")
-
-        # PostgreSQL을 사용하는 경우 FTS 사용
+        # PostgreSQL FTS 사용 여부 확인
         if settings.DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
             search_query = SearchQuery(query, config="simple")
-            return base_queryset.filter(search_vector=search_query).order_by(
-                "-updated_at"
-            )
+            return Post.objects.published().filter(
+                search_vector=search_query
+            ).order_by("-created_at")
 
-        # SQLite3 등 다른 데이터베이스의 경우 icontains 사용
-        return base_queryset.filter(
-            Q(title__icontains=query) | Q(content__icontains=query)
-        ).order_by("-updated_at")
+        return Post.objects.search(query).order_by("-created_at")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -199,10 +157,7 @@ class TaggedPostsView(ListView):
 
     def get_queryset(self):
         tag_name = self.kwargs.get('tag_name')
-        return Post.objects.filter(
-            tags__name__in=[tag_name],
-            status="published"
-        ).order_by('-updated_at')
+        return Post.objects.by_tag(tag_name)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

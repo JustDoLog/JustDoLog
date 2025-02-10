@@ -2,15 +2,16 @@ from django.views.generic import DetailView, CreateView, UpdateView, DeleteView,
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse, reverse_lazy
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse, Http404, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.db import models
 import uuid
 from datetime import datetime
-from .models import Blog, Post, PostRead
+from .models import Blog, Post, PostRead, PostLike
 from user.models import CustomUser, Follow
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
+from django.views.decorators.http import require_POST
 
 
 class BlogOwnerRequiredMixin(UserPassesTestMixin):
@@ -103,15 +104,8 @@ class UserPostDetailView(PostGetObjectMixin, DetailView):
         if self.request.user.is_authenticated:
             # 자신의 글은 조회수를 증가시키지 않음
             if post.author != self.request.user:
-                post_read, created = PostRead.objects.get_or_create(
-                    user=self.request.user,
-                    post=post
-                )
-                
-                # 새로운 조회인 경우에만 조회수 증가
-                if created:
-                    Post.objects.filter(pk=post.pk).update(views=models.F('views') + 1)
-                    post = Post.objects.get(pk=post.pk)  # 업데이트된 객체 다시 조회
+                PostRead.objects.record_read(user=self.request.user, post=post)
+                post = Post.objects.get(pk=post.pk)  # 업데이트된 객체 다시 조회
         else:
             # 비로그인 사용자는 항상 조회수 증가
             Post.objects.filter(pk=post.pk).update(views=models.F('views') + 1)
@@ -328,33 +322,14 @@ class UserPostDraftListView(LoginRequiredMixin, ListView):
         return context
 
 
+@require_POST
 @login_required
 def toggle_like(request, username, slug):
-    """포스트 좋아요 토글 뷰"""
-    if request.method != "POST":
-        return JsonResponse({"error": "Method not allowed"}, status=405)
-    
-    post = get_object_or_404(Post, blog__owner__username=username, slug=slug)
-    
-    # 자신의 글은 좋아요 불가
-    if post.author == request.user:
-        return JsonResponse({"error": "자신의 글은 좋아요할 수 없습니다."}, status=400)
+    """게시글 좋아요 토글"""
+    post = get_object_or_404(Post, slug=slug, blog__owner__username=username)
     
     # 좋아요 토글
-    if post.liked_by.filter(pk=request.user.pk).exists():
-        post.liked_by.remove(request.user)
-        post.likes = models.F('likes') - 1
-        liked = False
-    else:
-        post.liked_by.add(request.user)
-        post.likes = models.F('likes') + 1
-        liked = True
+    PostLike.objects.toggle(user=request.user, post=post)
     
-    post.save(update_fields=['likes'])
-    # F() 표현식으로 인한 값 갱신을 위해 다시 조회
-    post.refresh_from_db()
-    
-    return JsonResponse({
-        "liked": liked,
-        "likes_count": post.likes
-    })
+    # HTMX 응답
+    return HttpResponse(status=200)
