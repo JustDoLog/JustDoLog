@@ -1,5 +1,5 @@
-from django.views.generic import DetailView, CreateView, UpdateView, DeleteView, ListView
-from django.shortcuts import get_object_or_404
+from django.views.generic import DetailView, CreateView, UpdateView, DeleteView, ListView, View
+from django.shortcuts import get_object_or_404, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse, reverse_lazy
 from django.http import JsonResponse, Http404, HttpResponse
@@ -12,6 +12,11 @@ from .models import Blog, Post, PostRead, PostLike
 from user.models import CustomUser, Follow
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.views.decorators.http import require_POST
+from .mixins import PaginatedListMixin, UserContextMixin, HtmxResponseMixin
+import json
+from .services.like_service import LikeService
+from .services.read_service import ReadService
+from .services.post_service import PostService
 
 
 class BlogOwnerRequiredMixin(UserPassesTestMixin):
@@ -33,17 +38,15 @@ class PostGetObjectMixin:
         )
 
 
-class UserBlogMainView(DetailView):
+class UserBlogMainView(PaginatedListMixin, UserContextMixin, DetailView):
     model = Blog
     template_name = "blog/user_blog_main.html"
     context_object_name = "blog"
-    paginate_by = 10
 
     def get_object(self):
         return get_object_or_404(Blog, owner__username=self.kwargs["username"])
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
+    def get_queryset(self):
         blog = self.get_object()
         
         # 선택된 태그 확인
@@ -59,68 +62,58 @@ class UserBlogMainView(DetailView):
         if selected_tag:
             posts = posts.filter(tags__name=selected_tag)
             
-        posts = posts.order_by("-created_at")
+        # N+1 쿼리 최적화
+        return posts.select_related('author', 'blog').prefetch_related(
+            'tags',
+            models.Prefetch(
+                'liked_by',
+                queryset=CustomUser.objects.filter(id=self.request.user.id) if self.request.user.is_authenticated else CustomUser.objects.none(),
+                to_attr='user_likes'
+            )
+        ).order_by("-created_at")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        blog = self.get_object()
         
-        # 페이지네이션 처리
-        paginator = Paginator(posts, self.paginate_by)
-        page = self.request.GET.get('page')
-        
-        try:
-            posts = paginator.page(page)
-        except PageNotAnInteger:
-            posts = paginator.page(1)
-        except EmptyPage:
-            posts = paginator.page(paginator.num_pages)
-        
-        context["posts"] = posts
-        context["is_paginated"] = True
-        context["page_obj"] = posts
-        
-        # 팔로우 상태 확인
-        if self.request.user.is_authenticated and self.request.user != blog.owner:
-            context["is_following"] = Follow.objects.filter(
-                follower=self.request.user, following=blog.owner
-            ).exists()
-            
         # 태그 정보 추가
         context["tags"] = blog.get_tags_with_count()
-        context["selected_tag"] = selected_tag
+        context["selected_tag"] = self.request.GET.get('tag')
+        
+        # 게시글 목록 추가
+        context["posts"] = self.get_queryset()
         
         return context
 
 
-class UserPostDetailView(PostGetObjectMixin, DetailView):
+class UserPostDetailView(PostGetObjectMixin, UserContextMixin, DetailView):
     model = Post
     template_name = "blog/user_post_detail.html"
     context_object_name = "post"
+    _cached_object = None
 
     def get_object(self):
-        post = super().get_object()
-        # draft 상태의 글은 작성자만 볼 수 있음
-        if post.status == "draft" and post.blog.owner != self.request.user:
-            raise Http404("이 글을 볼 수 있는 권한이 없습니다.")
-        
-        # 조회수 증가 로직
-        if self.request.user.is_authenticated:
-            # 자신의 글은 조회수를 증가시키지 않음
-            if post.author != self.request.user:
-                PostRead.objects.record_read(user=self.request.user, post=post)
-                post = Post.objects.get(pk=post.pk)  # 업데이트된 객체 다시 조회
-        else:
-            # 비로그인 사용자는 항상 조회수 증가
-            Post.objects.filter(pk=post.pk).update(views=models.F('views') + 1)
-            post = Post.objects.get(pk=post.pk)  # 업데이트된 객체 다시 조회
-        
-        return post
+        if self._cached_object is None:
+            try:
+                self._cached_object = PostService.get_post_detail(
+                    username=self.kwargs["username"],
+                    slug=self.kwargs["slug"],
+                    user=self.request.user
+                )
+            except Post.DoesNotExist as e:
+                raise Http404(str(e))
+        return self._cached_object
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["is_owner"] = self.request.user == context["post"].blog.owner
-        context["is_following"] = False
-        context["has_liked"] = False
         if self.request.user.is_authenticated:
-            context["is_following"] = self.request.user.following.filter(following=context["post"].blog.owner).exists()
-            context["has_liked"] = self.request.user.liked_posts.filter(pk=context["post"].pk).exists()
+            context["is_following"] = self.request.user.following.filter(
+                following=context["post"].blog.owner
+            ).exists()
+            context["has_liked"] = LikeService.get_like_status(
+                self.request.user, 
+                context["post"]
+            )
         return context
 
 
@@ -322,14 +315,30 @@ class UserPostDraftListView(LoginRequiredMixin, ListView):
         return context
 
 
-@require_POST
-@login_required
-def toggle_like(request, username, slug):
-    """게시글 좋아요 토글"""
-    post = get_object_or_404(Post, slug=slug, blog__owner__username=username)
-    
-    # 좋아요 토글
-    PostLike.objects.toggle(user=request.user, post=post)
-    
-    # HTMX 응답
-    return HttpResponse(status=200)
+class PostLikeToggleView(LoginRequiredMixin, PostGetObjectMixin, HtmxResponseMixin, View):
+    def post(self, request, *args, **kwargs):
+        post = self.get_object()
+        has_liked, likes_count = LikeService.toggle_like(request.user, post)
+        
+        if not self.is_htmx_request():
+            return HttpResponse('HTMX request required', status=400)
+        
+        response = HttpResponse(
+            f'<button class="like-button" hx-post="{post.get_like_url()}" hx-swap="outerHTML">'
+            f'{"좋아요 취소" if has_liked else "좋아요"} ({likes_count})</button>'
+        )
+        response['HX-Trigger'] = json.dumps({
+            'likesUpdated': {
+                'postId': post.id,
+                'likesCount': likes_count,
+                'hasLiked': has_liked
+            }
+        })
+        return response
+
+
+class PostReadRecordView(PostGetObjectMixin, View):
+    def post(self, request, *args, **kwargs):
+        post = self.get_object()
+        ReadService.record_read(request.user, post)
+        return HttpResponse(status=204)

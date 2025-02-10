@@ -1,0 +1,17 @@
+{% if has_liked %}
+<button class="btn btn-danger btn-sm like-button"
+        hx-post="{{ post.get_like_url }}"
+        hx-swap="outerHTML"
+        hx-target="#like-button-{{ post.id }}"
+        id="like-button-{{ post.id }}">
+    <i class="fas fa-heart"></i> 좋아요 취소 <span class="likes-count">({{ post.likes }})</span>
+</button>
+{% else %}
+<button class="btn btn-outline-danger btn-sm like-button"
+        hx-post="{{ post.get_like_url }}"
+        hx-swap="outerHTML"
+        hx-target="#like-button-{{ post.id }}"
+        id="like-button-{{ post.id }}">
+    <i class="far fa-heart"></i> 좋아요 <span class="likes-count">({{ post.likes }})</span>
+</button>
+{% endif %} 

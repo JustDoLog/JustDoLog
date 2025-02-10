@@ -272,3 +272,27 @@ MINIO_SETTINGS = {
 
 # MinIO 설정 적용
 globals().update(MINIO_SETTINGS)
+
+# Cache settings
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL", "redis://localhost:6379/0"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+# Cache timeouts
+POST_CACHE_TTL = 60 * 15  # 15 minutes
+BLOG_CACHE_TTL = 60 * 30  # 30 minutes
+LIKES_CACHE_TTL = 60 * 5   # 5 minutes
+VIEWS_CACHE_TTL = 60 * 5   # 5 minutes
+
+# Cache key prefix
+CACHE_KEY_PREFIX = "jdl"
+
+# Session
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"

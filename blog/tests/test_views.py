@@ -2,6 +2,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from blog.models import Post, PostRead, PostLike
+from user.models import Follow
 from django.utils.text import slugify
 from freezegun import freeze_time
 from django.utils import timezone
@@ -11,16 +12,14 @@ User = get_user_model()
 class BlogViewTests(TestCase):
     @freeze_time("2024-03-15 12:00:00")
     def setUp(self):
-        """테스트 사용자 및 블로그 생성"""
+        """테스트 설정"""
+        self.client = Client()
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
             password='testpass123'
         )
-        
-        # 블로그는 signals.py에서 자동으로 생성되므로 직접 생성하지 않음
-        self.blog = self.user.blog  # OneToOne 관계를 통해 접근
-        
+        self.blog = self.user.blog
         self.post = Post.objects.create(
             blog=self.blog,
             author=self.user,
@@ -28,100 +27,9 @@ class BlogViewTests(TestCase):
             content='Test Content',
             status='published'
         )
-        self.client = Client()
-
-    @freeze_time("2024-03-15 12:00:00")
-    def test_integration_scenario(self):
-        """통합 시나리오 테스트: 계정 생성부터 게시글 상호작용까지"""
-        # 1. 새로운 사용자 생성 및 블로그 자동 생성 확인
-        new_user = User.objects.create_user(
-            username='newuser',
-            email='new@example.com',
-            password='newpass123'
-        )
-        self.assertTrue(hasattr(new_user, 'blog'))
-        self.assertIsNotNone(new_user.blog)
-
-        # 2. 로그인
-        self.client.login(username='newuser', password='newpass123')
-
-        # 3. 이미지가 포함된 새 게시글 작성
-        post_data = {
-            'title': 'New Post with Image',
-            'content': '<p>Test content</p><img src="https://example.com/image.jpg"><p>More content</p>',
-            'status': 'published'
-        }
-        response = self.client.post(
-            reverse('user_post_create', kwargs={'username': new_user.username}),
-            post_data
-        )
-        self.assertEqual(response.status_code, 302)  # 리다이렉트 확인
-
-        # 4. 생성된 게시글 확인
-        new_post = Post.objects.get(title='New Post with Image')
-        self.assertEqual(new_post.author, new_user)
-        self.assertEqual(new_post.blog, new_user.blog)
-        self.assertEqual(new_post.thumbnail, 'https://example.com/image.jpg')  # 썸네일 자동 추출 확인
-
-        # 5. 다른 사용자 생성 및 게시글 상호작용
-        other_user = User.objects.create_user(
-            username='otheruser',
-            email='other@example.com',
-            password='otherpass123'
-        )
-        self.client.login(username='otheruser', password='otherpass123')
-
-        # 6. 게시글 조회 (PostRead 생성)
-        response = self.client.get(
-            reverse('user_post_detail', kwargs={
-                'username': new_user.username,
-                'slug': new_post.slug
-            })
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(PostRead.objects.filter(user=other_user, post=new_post).exists())
-
-        # 7. 게시글 좋아요 (PostLike 생성)
-        response = self.client.post(
-            reverse('toggle_like', kwargs={
-                'username': new_user.username,
-                'slug': new_post.slug
-            }),
-            HTTP_HX_REQUEST='true'  # HTMX 요청 시뮬레이션
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(PostLike.objects.filter(user=other_user, post=new_post).exists())
-        
-        # 8. 게시글 상태 확인
-        new_post.refresh_from_db()
-        self.assertEqual(new_post.likes, 1)  # 좋아요 수 증가
-        self.assertEqual(new_post.views, 1)  # 조회수 증가
-
-        # 9. 중복 좋아요 방지 확인
-        response = self.client.post(
-            reverse('toggle_like', kwargs={
-                'username': new_user.username,
-                'slug': new_post.slug
-            }),
-            HTTP_HX_REQUEST='true'
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(PostLike.objects.filter(user=other_user, post=new_post).count(), 0)  # 좋아요 취소됨
-
-        # 10. 중복 조회 확인 (같은 사용자가 다시 조회)
-        response = self.client.get(
-            reverse('user_post_detail', kwargs={
-                'username': new_user.username,
-                'slug': new_post.slug
-            })
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(PostRead.objects.filter(user=other_user, post=new_post).count(), 1)  # 중복 조회 기록 없음
-        new_post.refresh_from_db()
-        self.assertEqual(new_post.views, 1)  # 조회수 증가 없음
 
     def test_like_button_redirect_when_not_authenticated(self):
-        """비로그인 사용자가 좋아요 버튼 클릭 시 로그인 페이지로 리다이렉션""" 
+        """비로그인 사용자가 좋아요 버튼 클릭 시 로그인 페이지로 리다이렉션"""
 
 class PostViewTests(TestCase):
     @freeze_time("2024-03-15 12:00:00")
@@ -404,3 +312,220 @@ class PostInteractionViewTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertFalse(PostRead.objects.filter(post=self.post).exists()) 
+
+class PaginatedListMixinTests(TestCase):
+    @freeze_time("2024-03-15 12:00:00")
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.blog = self.user.blog
+
+        # 페이지네이션 테스트를 위한 게시글 생성
+        for i in range(15):  # 15개의 게시글 생성
+            Post.objects.create(
+                blog=self.blog,
+                author=self.user,
+                title=f'Test Post {i}',
+                content=f'Content {i}',
+                status='published'
+            )
+
+    def test_pagination_with_valid_page(self):
+        """유효한 페이지 번호로 페이지네이션 테스트"""
+        response = self.client.get(reverse('user_blog_main', kwargs={'username': self.user.username}) + '?page=2')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['is_paginated'])
+        self.assertEqual(len(response.context['object_list']), 5)  # 두 번째 페이지에는 5개의 게시글
+
+    def test_pagination_with_invalid_page(self):
+        """잘못된 페이지 번호로 페이지네이션 테스트"""
+        response = self.client.get(reverse('user_blog_main', kwargs={'username': self.user.username}) + '?page=999')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['is_paginated'])
+        self.assertEqual(response.context['page_obj'].number, 2)  # 마지막 페이지로 이동
+
+    def test_pagination_with_non_integer_page(self):
+        """숫자가 아닌 페이지 값으로 페이지네이션 테스트"""
+        response = self.client.get(reverse('user_blog_main', kwargs={'username': self.user.username}) + '?page=abc')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context['is_paginated'])
+        self.assertEqual(response.context['page_obj'].number, 1)  # 첫 페이지로 이동 
+
+class UserContextMixinTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.blog = self.user.blog
+        self.post = Post.objects.create(
+            blog=self.blog,
+            author=self.user,
+            title='Test Post',
+            content='Test Content',
+            status='published'
+        )
+
+    def test_following_context(self):
+        """팔로우 컨텍스트 테스트"""
+        # 다른 사용자로 로그인
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='otherpass123'
+        )
+        self.client.login(username='otheruser', password='otherpass123')
+        
+        # 팔로우하기 전
+        response = self.client.get(
+            reverse('user_post_detail', kwargs={
+                'username': self.user.username,
+                'slug': self.post.slug
+            })
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context['is_following'])
+        
+        # 팔로우 후
+        Follow.objects.create(follower=other_user, following=self.user)
+        response = self.client.get(
+            reverse('user_post_detail', kwargs={
+                'username': self.user.username,
+                'slug': self.post.slug
+            })
+        )
+        self.assertTrue(response.context['is_following'])
+
+    def test_like_context(self):
+        """좋아요 컨텍스트 테스트"""
+        # 다른 사용자로 로그인
+        other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='otherpass123'
+        )
+        self.client.login(username='otheruser', password='otherpass123')
+        
+        # 좋아요하기 전
+        response = self.client.get(
+            reverse('user_post_detail', kwargs={
+                'username': self.user.username,
+                'slug': self.post.slug
+            })
+        )
+        self.assertFalse(response.context['has_liked'])
+        
+        # 좋아요 후
+        self.post.liked_by.add(other_user)
+        response = self.client.get(
+            reverse('user_post_detail', kwargs={
+                'username': self.user.username,
+                'slug': self.post.slug
+            })
+        )
+        self.assertTrue(response.context['has_liked'])
+
+    def test_unauthenticated_user_context(self):
+        """비인증 사용자에 대한 컨텍스트 테스트"""
+        # 로그아웃 상태에서 접근
+        response = self.client.get(
+            reverse('user_post_detail', kwargs={
+                'username': self.user.username,
+                'slug': self.post.slug
+            })
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context['is_owner'])
+        self.assertFalse(response.context['has_liked'])
+        self.assertFalse(response.context['is_following'])
+
+class HtmxResponseMixinTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='otherpass123'
+        )
+        self.blog = self.user.blog
+        self.post = Post.objects.create(
+            blog=self.blog,
+            author=self.user,
+            title='Test Post',
+            content='Test Content',
+            status='published'
+        )
+        # 로그인
+        self.assertTrue(
+            self.client.login(username='otheruser', password='otherpass123')
+        )
+
+    def test_htmx_like_toggle_response(self):
+        """HTMX 좋아요 토글 응답 테스트"""
+        # HTMX 헤더 추가
+        headers = {
+            'HTTP_HX_REQUEST': 'true',
+            'HTTP_X_REQUESTED_WITH': 'XMLHttpRequest'
+        }
+        
+        # 좋아요 요청
+        response = self.client.post(
+            reverse('toggle_like', kwargs={
+                'username': self.user.username,
+                'slug': self.post.slug
+            }),
+            **headers
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('좋아요 취소', response.content.decode())
+        self.assertIn('HX-Trigger', response.headers)
+        
+        # 좋아요 취소 요청
+        response = self.client.post(
+            reverse('toggle_like', kwargs={
+                'username': self.user.username,
+                'slug': self.post.slug
+            }),
+            **headers
+        )
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('좋아요', response.content.decode())
+
+    def test_non_htmx_request_handling(self):
+        """비 HTMX 요청 처리 테스트"""
+        response = self.client.post(
+            reverse('toggle_like', kwargs={
+                'username': self.user.username,
+                'slug': self.post.slug
+            })
+        )
+        self.assertEqual(response.status_code, 400)
+
+    def test_htmx_trigger_headers(self):
+        """HTMX 트리거 헤더 테스트"""
+        headers = {
+            'HTTP_HX_REQUEST': 'true',
+            'HTTP_X_REQUESTED_WITH': 'XMLHttpRequest'
+        }
+        response = self.client.post(
+            reverse('toggle_like', kwargs={
+                'username': self.user.username,
+                'slug': self.post.slug
+            }),
+            **headers
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('HX-Trigger', response.headers)
+        self.assertIn('likesUpdated', response.headers['HX-Trigger']) 

@@ -47,3 +47,24 @@ AWS_S3_REGION_NAME = "us-east-1"
 # File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024  # 5MB
 MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB
+
+# Redis Cache Settings
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.getenv("REDIS_URL", "redis://redis:6379/0"),
+    }
+}
+
+# Cache timeouts
+POST_CACHE_TTL = 60 * 15  # 15 minutes
+BLOG_CACHE_TTL = 60 * 30  # 30 minutes
+LIKES_CACHE_TTL = 60 * 5  # 5 minutes
+VIEWS_CACHE_TTL = 60 * 5  # 5 minutes
+
+# Cache key prefix
+CACHE_KEY_PREFIX = "jdl"
+
+# Session
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"

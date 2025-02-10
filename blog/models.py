@@ -6,10 +6,13 @@ from django.contrib.postgres.search import SearchVectorField
 from django.contrib.postgres.indexes import GinIndex
 from bs4 import BeautifulSoup
 from taggit.managers import TaggableManager
-from django.db.models import Count, Q, Prefetch
+from django.db.models import Count, Q, Prefetch, F
 from taggit.models import Tag
 from django.utils import timezone
 from datetime import timedelta
+from django.urls import reverse
+from django.core.cache import cache
+from django.conf import settings
 
 
 class PostManager(models.Manager):
@@ -197,6 +200,64 @@ class Post(models.Model):
 
         super().save(*args, **kwargs)
 
+    def get_like_url(self):
+        """좋아요 토글 URL 반환"""
+        return reverse('toggle_like', kwargs={
+            'username': self.blog.owner.username,
+            'slug': self.slug
+        })
+
+    def get_cache_key(self, suffix=''):
+        """캐시 키 생성"""
+        return f"{settings.CACHE_KEY_PREFIX}:post:{self.id}:{suffix}"
+
+    def get_likes_count(self):
+        """좋아요 수 조회 (캐시 적용)"""
+        cache_key = self.get_cache_key('likes')
+        count = cache.get(cache_key)
+        
+        if count is None:
+            count = self.likes
+            cache.set(cache_key, count, settings.LIKES_CACHE_TTL)
+        
+        return count
+
+    def get_views_count(self):
+        """조회수 조회 (캐시 적용)"""
+        cache_key = self.get_cache_key('views')
+        count = cache.get(cache_key)
+        
+        if count is None:
+            count = self.views
+            cache.set(cache_key, count, settings.VIEWS_CACHE_TTL)
+        
+        return count
+
+    def increment_likes(self):
+        """좋아요 수 증가"""
+        Post.objects.filter(id=self.id).update(likes=F('likes') + 1)
+        self.refresh_from_db()
+        return self.likes
+
+    def decrement_likes(self):
+        """좋아요 수 감소"""
+        Post.objects.filter(id=self.id).update(likes=F('likes') - 1)
+        self.refresh_from_db()
+        return self.likes
+
+    def increment_views(self):
+        """조회수 증가"""
+        Post.objects.filter(id=self.id).update(views=F('views') + 1)
+        self.refresh_from_db()
+        return self.views
+
+    def get_absolute_url(self):
+        """게시글의 상세 페이지 URL을 반환"""
+        return reverse('user_post_detail', kwargs={
+            'username': self.blog.owner.username,
+            'slug': self.slug
+        })
+
 
 class PostLikeManager(models.Manager):
     def get_queryset(self):
@@ -231,31 +292,32 @@ class PostLikeManager(models.Manager):
 
 class PostReadManager(models.Manager):
     def get_queryset(self):
-        """기본 queryset에 자주 사용되는 관계들을 미리 로드"""
-        return super().get_queryset().select_related('user', 'post')
-    
+        return super().get_queryset()
+
     def record_read(self, user, post):
-        """조회 기록 생성 또는 업데이트"""
-        read, created = self.get_or_create(user=user, post=post)
+        """사용자의 게시글 조회를 기록"""
+        read_record, created = self.get_or_create(
+            user=user,
+            post=post,
+            defaults={'updated_at': timezone.now()}
+        )
         if not created:
-            read.save()  # updated_at 필드 업데이트
-        if created:
-            post.views = models.F('views') + 1
-            post.save()
-        return read
-    
+            read_record.updated_at = timezone.now()
+            read_record.save(update_fields=['updated_at'])
+        return read_record
+
     def get_user_reads(self, user):
-        """특정 사용자의 조회 기록"""
-        return self.get_queryset().filter(user=user).order_by('-updated_at')
-    
+        """사용자가 읽은 게시글 목록"""
+        return self.filter(user=user).select_related('post')
+
     def get_post_reads(self, post):
-        """특정 게시글의 조회 기록"""
-        return self.get_queryset().filter(post=post).order_by('-updated_at')
-    
+        """게시글을 읽은 사용자 목록"""
+        return self.filter(post=post).select_related('user')
+
     def get_recent_reads(self, days=7):
-        """최근 n일 동안의 조회 기록"""
+        """최근 읽은 게시글 목록"""
         start_date = timezone.now() - timedelta(days=days)
-        return self.get_queryset().filter(updated_at__gte=start_date).order_by('-updated_at')
+        return self.filter(updated_at__gte=start_date)
 
 
 class PostLike(models.Model):

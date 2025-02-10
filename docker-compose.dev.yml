@@ -21,6 +21,8 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+      redis:
+        condition: service_started
 
   minio:
     image: 'bitnami/minio:latest'
@@ -42,5 +44,20 @@ services:
       - app-tier
     command: sh -c "apt-get update && apt-get install -y curl && /docker-entrypoint-initdb.d/init-minio.sh & /opt/bitnami/scripts/minio/run.sh"
 
+  redis:
+    image: 'redis:7.2-alpine'
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-tier
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
-  minio_data: 
+  minio_data:
+  redis_data: 

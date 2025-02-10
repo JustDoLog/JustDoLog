@@ -40,8 +40,13 @@ urlpatterns = [
         name="user_post_delete",
     ),
     re_path(
-        r"^@(?P<username>[^/]+)/posts/(?P<slug>[-\w가-힣]+)/like/$",
-        views.toggle_like,
+        r"^@(?P<username>[^/]+)/posts/(?P<slug>[-\w가-힣]+)/like/$", 
+        views.PostLikeToggleView.as_view(), 
         name="toggle_like",
+    ),
+    re_path(
+        r"^@(?P<username>[^/]+)/posts/(?P<slug>[-\w가-힣]+)/read/$",
+        views.PostReadRecordView.as_view(),
+        name="record_read",
     ),
 ]
