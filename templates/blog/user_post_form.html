@@ -133,7 +133,7 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('tagInput', () => ({
-            tags: [{% for tag in form.tags.value.all %}'{{ tag.name }}',{% endfor %}],
+            tags: [{% if form.instance.pk %}{% for tag in form.instance.tags.all %}'{{ tag.name }}',{% endfor %}{% endif %}],
             newTag: '',
             
             handleKeydown(event) {

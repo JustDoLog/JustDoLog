@@ -76,7 +76,16 @@ class Post(models.Model):
     def __str__(self):
         return self.title
 
+    def clean(self):
+        """데이터 유효성 검사"""
+        if self.status not in dict(self._meta.get_field('status').choices):
+            raise ValueError(f"Invalid status value: {self.status}")
+        super().clean()
+
     def save(self, *args, **kwargs):
+        # clean 메서드 호출하여 유효성 검사 수행
+        self.clean()
+
         # 새로운 포스트이거나 title이 변경된 경우에만 slug 업데이트
         if (
             not self.pk
@@ -110,6 +119,9 @@ class PostLike(models.Model):
         unique_together = ("user", "post")
         ordering = ["-created_at"]
 
+    def __str__(self):
+        return f"{self.user.username} likes {self.post.title}"
+
 
 class PostRead(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
@@ -120,3 +132,6 @@ class PostRead(models.Model):
     class Meta:
         unique_together = ("user", "post")
         ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"{self.user.username} read {self.post.title}"
