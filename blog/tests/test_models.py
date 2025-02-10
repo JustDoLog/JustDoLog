@@ -5,10 +5,12 @@ from blog.models import Blog, Post, PostLike, PostRead
 from taggit.models import Tag
 from django.utils import timezone
 import datetime
+from freezegun import freeze_time
 
 User = get_user_model()
 
 class BlogModelTest(TestCase):
+    @freeze_time("2024-03-15 12:00:00")
     def setUp(self):
         """테스트 데이터 설정"""
         self.user = User.objects.create_user(
@@ -18,6 +20,7 @@ class BlogModelTest(TestCase):
         )
         self.blog = self.user.blog  # signal에 의해 자동 생성됨
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_auto_blog_creation(self):
         """새 사용자 생성 시 Blog 자동 생성 테스트"""
         # 새로운 사용자 생성
@@ -38,8 +41,11 @@ class BlogModelTest(TestCase):
         self.assertEqual(new_user.blog.title, f"Just Do {new_user.username}'s Blog")
         self.assertEqual(new_user.blog.description, "")
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_blog_fields(self):
         """Blog 필드 및 str 메소드 테스트"""
+        initial_time = timezone.now()
+        
         # 필드 값 업데이트
         self.blog.title = "Test Blog"
         self.blog.description = "Test Description"
@@ -48,18 +54,20 @@ class BlogModelTest(TestCase):
         # 필드 값 검증
         self.assertEqual(self.blog.title, "Test Blog")
         self.assertEqual(self.blog.description, "Test Description")
-        self.assertIsInstance(self.blog.created_at, datetime.datetime)
-        self.assertIsInstance(self.blog.updated_at, datetime.datetime)
+        self.assertEqual(self.blog.created_at, initial_time)
+        self.assertEqual(self.blog.updated_at, initial_time)
         
         # str 메소드 검증
         self.assertEqual(str(self.blog), "Test Blog")
 
         # updated_at이 수정 시 업데이트되는지 확인
-        old_updated_at = self.blog.updated_at
-        self.blog.title = "Updated Blog"
-        self.blog.save()
-        self.assertGreater(self.blog.updated_at, old_updated_at)
+        with freeze_time("2024-03-15 13:00:00"):  # 1시간 후
+            self.blog.title = "Updated Blog"
+            self.blog.save()
+            self.assertEqual(self.blog.updated_at, timezone.now())
+            self.assertGreater(self.blog.updated_at, initial_time)
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_get_tags_with_count(self):
         """get_tags_with_count 메소드 테스트"""
         # 게시글 생성 및 태그 추가

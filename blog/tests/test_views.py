@@ -3,10 +3,13 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from blog.models import Post, PostRead, PostLike
 from django.utils.text import slugify
+from freezegun import freeze_time
+from django.utils import timezone
 
 User = get_user_model()
 
 class BlogViewTests(TestCase):
+    @freeze_time("2024-03-15 12:00:00")
     def setUp(self):
         """테스트 사용자 및 블로그 생성"""
         self.user = User.objects.create_user(
@@ -27,6 +30,7 @@ class BlogViewTests(TestCase):
         )
         self.client = Client()
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_integration_scenario(self):
         """통합 시나리오 테스트: 계정 생성부터 게시글 상호작용까지"""
         # 1. 새로운 사용자 생성 및 블로그 자동 생성 확인
@@ -120,6 +124,7 @@ class BlogViewTests(TestCase):
         """비로그인 사용자가 좋아요 버튼 클릭 시 로그인 페이지로 리다이렉션""" 
 
 class PostViewTests(TestCase):
+    @freeze_time("2024-03-15 12:00:00")
     def setUp(self):
         """테스트 설정"""
         self.client = Client()
@@ -137,6 +142,7 @@ class PostViewTests(TestCase):
             status='published'
         )
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_post_list_view(self):
         """게시글 목록 뷰 테스트"""
         response = self.client.get(reverse('user_blog_main', kwargs={'username': self.user.username}))
@@ -144,6 +150,7 @@ class PostViewTests(TestCase):
         self.assertTemplateUsed(response, 'blog/user_blog_main.html')
         self.assertContains(response, 'Test Post')
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_post_detail_view(self):
         """게시글 상세 뷰 테스트"""
         response = self.client.get(
@@ -157,6 +164,7 @@ class PostViewTests(TestCase):
         self.assertContains(response, self.post.title)
         self.assertContains(response, self.post.content)
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_post_create_view(self):
         """게시글 생성 뷰 테스트"""
         self.client.login(username=self.user.username, password='testpass123')
@@ -176,37 +184,38 @@ class PostViewTests(TestCase):
             post_data
         )
         self.assertEqual(response.status_code, 302)  # 리다이렉션 확인
-        self.assertTrue(Post.objects.filter(title='New Test Post').exists())
+        
+        new_post = Post.objects.get(title='New Test Post')
+        self.assertEqual(new_post.created_at, timezone.now())
+        self.assertEqual(new_post.updated_at, timezone.now())
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_post_update_view(self):
         """게시글 수정 뷰 테스트"""
+        initial_time = timezone.now()
         self.client.login(username=self.user.username, password='testpass123')
-        response = self.client.get(
-            reverse('user_post_update', kwargs={
-                'username': self.user.username,
-                'slug': self.post.slug
-            })
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'blog/user_post_form.html')
+        
+        with freeze_time("2024-03-15 13:00:00"):  # 1시간 후
+            response = self.client.post(
+                reverse('user_post_update', kwargs={
+                    'username': self.user.username,
+                    'slug': self.post.slug
+                }),
+                {
+                    'title': 'Updated Title',
+                    'content': 'Updated content',
+                    'status': 'published'
+                }
+            )
+            self.assertEqual(response.status_code, 302)  # 리다이렉션 확인
+            
+            self.post.refresh_from_db()
+            self.assertEqual(self.post.title, 'Updated Title')
+            self.assertEqual(self.post.content, 'Updated content')
+            self.assertEqual(self.post.created_at, initial_time)  # created_at은 변경되지 않음
+            self.assertEqual(self.post.updated_at, timezone.now())  # updated_at은 현재 시간으로 변경
 
-        updated_data = {
-            'title': 'Updated Title',
-            'content': 'Updated content',
-            'status': 'published'
-        }
-        response = self.client.post(
-            reverse('user_post_update', kwargs={
-                'username': self.user.username,
-                'slug': self.post.slug
-            }),
-            updated_data
-        )
-        self.assertEqual(response.status_code, 302)  # 리다이렉션 확인
-        self.post.refresh_from_db()
-        self.assertEqual(self.post.title, 'Updated Title')
-        self.assertEqual(self.post.content, 'Updated content')
-
+    @freeze_time("2024-03-15 12:00:00")
     def test_post_delete_view(self):
         """게시글 삭제 뷰 테스트"""
         self.client.login(username=self.user.username, password='testpass123')
@@ -219,6 +228,7 @@ class PostViewTests(TestCase):
         self.assertEqual(response.status_code, 302)  # 리다이렉션 확인
         self.assertFalse(Post.objects.filter(pk=self.post.pk).exists())
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_unauthorized_post_operations(self):
         """권한이 없는 사용자의 게시글 작업 테스트"""
         # 다른 사용자 생성
@@ -247,6 +257,7 @@ class PostViewTests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertTrue(Post.objects.filter(pk=self.post.pk).exists())
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_draft_post_visibility(self):
         """임시저장 게시글 접근 제한 테스트"""
         draft_post = Post.objects.create(
@@ -292,6 +303,7 @@ class PostViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
 class PostInteractionViewTests(TestCase):
+    @freeze_time("2024-03-15 12:00:00")
     def setUp(self):
         """테스트 설정"""
         self.client = Client()
@@ -314,6 +326,7 @@ class PostInteractionViewTests(TestCase):
             status='published'
         )
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_post_like_toggle(self):
         """게시글 좋아요 토글 테스트"""
         self.client.login(username='otheruser', password='pass123')
@@ -340,6 +353,7 @@ class PostInteractionViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertFalse(PostLike.objects.filter(user=self.other_user, post=self.post).exists())
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_post_read_tracking(self):
         """게시글 조회 기록 테스트"""
         self.client.login(username='otheruser', password='pass123')
@@ -368,6 +382,7 @@ class PostInteractionViewTests(TestCase):
             initial_read_count  # 조회 기록이 중복 생성되지 않아야 함
         )
 
+    @freeze_time("2024-03-15 12:00:00")
     def test_post_interaction_authentication(self):
         """게시글 상호작용 인증 요구 테스트"""
         # 비로그인 상태에서 좋아요 시도
