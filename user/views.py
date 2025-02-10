@@ -1,24 +1,65 @@
-from django.views.generic import TemplateView, View
+from django.views.generic import TemplateView, View, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import redirect, get_object_or_404, render
+from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model, logout
-from django.http import HttpResponseRedirect, HttpResponse
-from django.urls import reverse
+from django.http import HttpResponse
+from django.urls import reverse, reverse_lazy
 from .models import Follow
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
-from django.template.loader import render_to_string
 from django.contrib import messages
-from django.core.files.storage import default_storage
-from django.conf import settings
-import boto3
-from botocore.client import Config
-import uuid
 
 User = get_user_model()
 
 class ProfileView(LoginRequiredMixin, TemplateView):
     template_name = "account/profile.html"
+
+
+class ProfileEditView(LoginRequiredMixin, UpdateView):
+    model = User
+    template_name = 'account/profile_edit.html'
+    fields = []  # 실제 필드는 form_valid에서 처리
+    success_url = reverse_lazy('profile')
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def form_valid(self, form):
+        user = form.instance
+        
+        # 프로필 이미지 처리
+        if 'profile_image' in self.request.FILES:
+            if user.profile_image:
+                user.profile_image.delete()
+            user.profile_image = self.request.FILES['profile_image']
+        
+        # 소셜 URL 업데이트
+        user.github_url = self.request.POST.get('github_url', '')
+        user.twitter_url = self.request.POST.get('twitter_url', '')
+        user.facebook_url = self.request.POST.get('facebook_url', '')
+        user.homepage_url = self.request.POST.get('homepage_url', '')
+        
+        # 블로그 정보 업데이트
+        if hasattr(user, 'blog'):
+            user.blog.title = self.request.POST.get('blog_title', '')
+            user.blog.description = self.request.POST.get('blog_description', '')
+            user.blog.save()
+        
+        messages.success(self.request, '프로필이 성공적으로 업데이트되었습니다.')
+        return super().form_valid(form)
+
+
+class AccountDeleteView(LoginRequiredMixin, DeleteView):
+    model = User
+    template_name = 'account/account_delete.html'
+    success_url = reverse_lazy('trending_day')
+
+    def get_object(self, queryset=None):
+        return self.request.user
+
+    def delete(self, request, *args, **kwargs):
+        messages.success(self.request, "계정이 성공적으로 삭제되었습니다.")
+        logout(request)
+        return super().delete(request, *args, **kwargs)
+
 
 class FollowUserView(LoginRequiredMixin, View):
     def post(self, request, username):
@@ -54,159 +95,3 @@ class FollowUserView(LoginRequiredMixin, View):
         '''
         
         return HttpResponse(button_html)
-
-@login_required
-@require_POST
-def upload_profile_image(request):
-    if 'profile_image' in request.FILES:
-        file = request.FILES['profile_image']
-        
-        if not file.content_type.startswith("image/"):
-            return HttpResponse("Invalid file type", status=400)
-        
-        # 기존 이미지 삭제
-        if request.user.profile_image:
-            request.user.profile_image.delete()
-        
-        # 새 이미지 저장
-        request.user.profile_image = file
-        request.user.save()
-        
-        # 업데이트된 프로필 이미지 섹션 반환
-        html = render_to_string('account/partials/profile_image.html', {'user': request.user})
-        return HttpResponse(html)
-            
-    return HttpResponse(status=400)
-
-@login_required
-@require_POST
-def remove_profile_image(request):
-    user = request.user
-    if user.profile_image:
-        user.profile_image.delete()
-        user.profile_image = None
-    user.save()
-    
-    # Return the updated profile image section
-    html = render_to_string('account/partials/profile_image.html', {'user': request.user})
-    return HttpResponse(html)
-
-@login_required
-def toggle_edit_mode(request):
-    """프로필 편집 모드 토글을 위한 뷰"""
-    is_edit_mode = request.GET.get('edit_mode', 'false') == 'true'
-    html = render_to_string('account/partials/profile_form.html', {
-        'user': request.user,
-        'is_edit_mode': is_edit_mode
-    })
-    return HttpResponse(html)
-
-@login_required
-@require_POST
-def update_profile(request):
-    user = request.user
-    blog_description = request.POST.get('blog_description')
-    
-    if blog_description is not None:
-        user.blog.description = blog_description
-        user.blog.save()
-    
-    # 저장 후 읽기 전용 모드로 변경
-    html = render_to_string('account/partials/profile_form.html', {
-        'user': request.user,
-        'is_edit_mode': False
-    })
-    return HttpResponse(html)
-
-@login_required
-def profile_view(request):
-    return render(request, "account/profile.html")
-
-@login_required
-def profile_image_upload(request):
-    if request.method == "POST" and request.FILES.get("profile_image"):
-        request.user.profile_image = request.FILES["profile_image"]
-        request.user.save()
-        return render(request, "account/partials/profile_image.html")
-    return HttpResponse(status=400)
-
-@login_required
-def profile_form(request):
-    is_edit_mode = request.GET.get("edit") == "true"
-    return render(request, "account/partials/profile_form.html", {
-        "is_edit_mode": is_edit_mode
-    })
-
-@login_required
-def profile_update(request):
-    if request.method == "POST":
-        blog = request.user.blog
-        blog.title = request.POST.get("blog_title", "")
-        blog.description = request.POST.get("blog_description", "")
-        blog.save()
-        return render(request, "account/partials/profile_form.html", {
-            "is_edit_mode": False
-        })
-    return HttpResponse(status=400)
-
-@login_required
-def account_delete(request):
-    if request.method == "POST":
-        user = request.user
-        logout(request)
-        user.delete()
-        messages.success(request, "계정이 성공적으로 삭제되었습니다.")
-        return redirect("trending_day")
-    return render(request, "account/account_delete.html")
-
-@login_required
-@require_POST
-def toggle_social_edit(request):
-    """소셜 정보 수정 모드 토글"""
-    return render(request, 'account/partials/social_info.html', {
-        'is_edit_mode': True
-    })
-
-@login_required
-@require_POST
-def update_social_info(request):
-    """소셜 정보 업데이트"""
-    user = request.user
-    user.github_url = request.POST.get('github_url', '')
-    user.twitter_url = request.POST.get('twitter_url', '')
-    user.facebook_url = request.POST.get('facebook_url', '')
-    user.homepage_url = request.POST.get('homepage_url', '')
-    user.save()
-
-    return render(request, 'account/partials/social_info.html', {
-        'is_edit_mode': False
-    })
-
-@login_required
-def profile_edit(request):
-    if request.method == "POST":
-        user = request.user
-        
-        # 프로필 이미지 처리
-        if 'profile_image' in request.FILES:
-            if user.profile_image:
-                user.profile_image.delete()
-            user.profile_image = request.FILES['profile_image']
-        
-        # 소셜 URL 업데이트
-        user.github_url = request.POST.get('github_url', '')
-        user.twitter_url = request.POST.get('twitter_url', '')
-        user.facebook_url = request.POST.get('facebook_url', '')
-        user.homepage_url = request.POST.get('homepage_url', '')
-        
-        # 블로그 정보 업데이트
-        if hasattr(user, 'blog'):
-            user.blog.title = request.POST.get('blog_title', '')
-            user.blog.description = request.POST.get('blog_description', '')
-            user.blog.save()
-        
-        user.save()
-        messages.success(request, '프로필이 성공적으로 업데이트되었습니다.')
-        return redirect('profile')
-        
-    return render(request, 'account/profile_edit.html')

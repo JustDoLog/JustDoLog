@@ -1,15 +1,14 @@
-from django.test import TestCase, Client
+from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
-from django.utils import timezone
 from unittest.mock import patch
-from .models import Follow
+from ..models import Follow
 import os
 import datetime
-from django.urls import reverse
 
 User = get_user_model()
+
 
 class CustomUserTests(TestCase):
     def setUp(self):
@@ -106,42 +105,6 @@ class CustomUserTests(TestCase):
         with self.assertRaises(ValidationError):
             self.user.save()
 
-    def test_follow_user(self):
-        """사용자 팔로우 테스트"""
-        # 다른 사용자 생성
-        other_user = User.objects.create_user(
-            username='otheruser',
-            email='other@example.com',
-            password='testpass123'
-        )
-
-        # 팔로우 관계 생성
-        Follow.objects.create(follower=self.user, following=other_user)
-
-        # 팔로우 확인
-        self.assertTrue(self.user.following.filter(following=other_user).exists())
-        self.assertTrue(other_user.followers.filter(follower=self.user).exists())
-
-    def test_self_follow_prevention(self):
-        """자기 자신을 팔로우할 수 없음을 테스트"""
-        # 자기 자신을 팔로우 시도
-        with self.assertRaises(ValidationError):
-            Follow.objects.create(follower=self.user, following=self.user)
-
-    def test_url_fields_validation(self):
-        """URL 필드 유효성 검사 테스트"""
-        # 유효한 URL
-        self.user.github_url = 'https://github.com/username'
-        self.user.twitter_url = 'https://twitter.com/username'
-        self.user.facebook_url = 'https://facebook.com/username'
-        self.user.homepage_url = 'https://example.com'
-        self.user.full_clean()  # ValidationError가 발생하지 않아야 함
-
-        # 잘못된 URL 형식
-        self.user.github_url = 'not-a-url'
-        with self.assertRaises(ValidationError):
-            self.user.full_clean()
-
     def test_large_image_upload(self):
         """큰 이미지 파일 업로드 테스트"""
         # 5MB를 초과하는 이미지 생성
@@ -218,6 +181,7 @@ class CustomUserTests(TestCase):
             self.user.github_url = 'not-a-url'
             self.user.full_clean()
 
+
 class FollowTests(TestCase):
     def setUp(self):
         """테스트 사용자 생성"""
@@ -276,154 +240,3 @@ class FollowTests(TestCase):
             follow.save()
         
         self.assertIn("자기 자신을 팔로우할 수 없습니다", str(context.exception))
-
-class UserViewTests(TestCase):
-    def setUp(self):
-        """테스트 사용자 및 클라이언트 설정"""
-        self.client = Client()
-        self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
-        )
-        self.other_user = User.objects.create_user(
-            username='otheruser',
-            email='other@example.com',
-            password='testpass123'
-        )
-
-    def test_profile_view_authentication(self):
-        """프로필 뷰 인증 테스트"""
-        # 비로그인 상태에서 접근
-        response = self.client.get(reverse('profile'))
-        self.assertEqual(response.status_code, 302)  # 로그인 페이지로 리다이렉트
-        
-        # 로그인 후 접근
-        self.client.login(username='testuser', password='testpass123')
-        response = self.client.get(reverse('profile'))
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'account/profile.html')
-
-    def test_profile_edit_view(self):
-        """프로필 수정 뷰 테스트"""
-        self.client.login(username='testuser', password='testpass123')
-        
-        # GET 요청 테스트
-        response = self.client.get(reverse('profile_edit'))
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'account/profile_edit.html')
-        
-        # POST 요청 테스트 - 프로필 업데이트
-        image_content = b'GIF87a\x01\x00\x01\x00\x80\x01\x00\x00\x00\x00ccc,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
-        image = SimpleUploadedFile(
-            'test.gif',
-            image_content,
-            content_type='image/gif'
-        )
-        update_data = {
-            'github_url': 'https://github.com/testuser',
-            'twitter_url': 'https://twitter.com/testuser',
-            'facebook_url': 'https://facebook.com/testuser',
-            'homepage_url': 'https://example.com',
-            'blog_title': 'Test Blog',
-            'blog_description': 'Test Description',
-            'profile_image': image
-        }
-        
-        response = self.client.post(reverse('profile_edit'), update_data)
-        self.assertEqual(response.status_code, 302)  # 리다이렉트 확인
-        self.assertRedirects(response, reverse('profile'))
-        
-        # 데이터가 실제로 업데이트되었는지 확인
-        self.user.refresh_from_db()
-        self.assertEqual(self.user.github_url, update_data['github_url'])
-        self.assertEqual(self.user.twitter_url, update_data['twitter_url'])
-        self.assertEqual(self.user.facebook_url, update_data['facebook_url'])
-        self.assertEqual(self.user.homepage_url, update_data['homepage_url'])
-        self.assertEqual(self.user.blog.title, update_data['blog_title'])
-        self.assertEqual(self.user.blog.description, update_data['blog_description'])
-        self.assertTrue(self.user.profile_image)
-
-    def test_account_delete_view(self):
-        """계정 삭제 뷰 테스트"""
-        self.client.login(username='testuser', password='testpass123')
-        
-        # GET 요청 테스트 - 삭제 확인 페이지
-        response = self.client.get(reverse('account_delete'))
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'account/account_delete.html')
-        
-        # POST 요청 테스트 - 실제 삭제
-        response = self.client.post(reverse('account_delete'))
-        self.assertEqual(response.status_code, 302)  # 리다이렉트 확인
-        self.assertRedirects(response, reverse('trending_day'))
-        
-        # 사용자가 실제로 삭제되었는지 확인
-        self.assertFalse(User.objects.filter(username='testuser').exists())
-
-    def test_follow_user_view(self):
-        """팔로우 기능 테스트"""
-        self.client.login(username='testuser', password='testpass123')
-        
-        # 팔로우 요청
-        response = self.client.post(
-            reverse('follow_user', kwargs={'username': self.other_user.username}),
-            HTTP_HX_REQUEST='true'  # HTMX 요청 시뮬레이션
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(
-            Follow.objects.filter(
-                follower=self.user,
-                following=self.other_user
-            ).exists()
-        )
-        
-        # 언팔로우 요청
-        response = self.client.post(
-            reverse('follow_user', kwargs={'username': self.other_user.username}),
-            HTTP_HX_REQUEST='true'
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertFalse(
-            Follow.objects.filter(
-                follower=self.user,
-                following=self.other_user
-            ).exists()
-        )
-
-    def test_self_follow_prevention(self):
-        """자기 자신 팔로우 방지 테스트"""
-        self.client.login(username='testuser', password='testpass123')
-        
-        response = self.client.post(
-            reverse('follow_user', kwargs={'username': self.user.username}),
-            HTTP_HX_REQUEST='true'
-        )
-        self.assertEqual(response.status_code, 400)
-
-    def test_unauthenticated_access(self):
-        """비인증 사용자 접근 제한 테스트"""
-        # 프로필 뷰
-        response = self.client.get(reverse('profile'))
-        self.assertEqual(response.status_code, 302)
-        
-        # 프로필 수정 뷰
-        response = self.client.get(reverse('profile_edit'))
-        self.assertEqual(response.status_code, 302)
-        
-        # 계정 삭제 뷰
-        response = self.client.get(reverse('account_delete'))
-        self.assertEqual(response.status_code, 302)
-        
-        # 팔로우 뷰
-        response = self.client.post(
-            reverse('follow_user', kwargs={'username': self.other_user.username})
-        )
-        self.assertEqual(response.status_code, 302)
-
-    def tearDown(self):
-        """테스트 후 cleanup"""
-        # 업로드된 이미지 파일 정리
-        if self.user.profile_image:
-            if os.path.isfile(self.user.profile_image.path):
-                os.remove(self.user.profile_image.path)
