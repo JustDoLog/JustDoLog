@@ -3,6 +3,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import RedirectView
+from user import views
 
 urlpatterns = [
     path("", RedirectView.as_view(pattern_name="trending_day", permanent=False)),

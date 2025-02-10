@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 {% load i18n %}
+{% load socialaccount %}
 
 {% block title %}프로필 설정{% endblock %}
 
@@ -17,18 +18,61 @@
         </h1>
 
         <!-- 프로필 정보 -->
-        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-            <div class="p-6 pb-16">  <!-- 하단에 버튼을 위한 여백 추가 -->
-                <div class="flex gap-8">
-                    <!-- 프로필 이미지 섹션 -->
-                    <div id="profile-image-container" {% if not is_edit_mode %}class="pointer-events-none opacity-60"{% endif %}>
-                        {% include "account/partials/profile_image.html" %}
-                    </div>
+        <div class="space-y-6">
+            <!-- 계정 일반 정보 -->
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                    <h2 class="text-lg font-medium text-gray-900">계정 정보</h2>
+                </div>
+                <div class="px-4 py-5 sm:p-6">
+                    <div class="flex gap-8">
+                        <!-- 프로필 이미지 섹션 -->
+                        <div id="profile-image-container">
+                            {% include "account/partials/profile_image.html" %}
+                        </div>
 
-                    <!-- 프로필 폼 섹션 -->
-                    <div id="profile-form-container" class="flex-1">
+                        <!-- 기본 정보 -->
+                        <div class="flex-1">
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">아이디</label>
+                                    <p class="mt-1 text-sm text-gray-900">{{ user.username }}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">이메일</label>
+                                    <p class="mt-1 text-sm text-gray-900">{{ user.email }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 블로그 정보 -->
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                    <h2 class="text-lg font-medium text-gray-900">블로그 정보</h2>
+                </div>
+                <div class="px-4 py-5 sm:p-6">
+                    <div id="profile-form-container">
                         {% include "account/partials/profile_form.html" with is_edit_mode=False %}
                     </div>
+                </div>
+            </div>
+
+            <!-- 회원 탈퇴 -->
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                    <h2 class="text-lg font-medium text-red-600">계정 삭제</h2>
+                </div>
+                <div class="px-4 py-5 sm:p-6">
+                    <p class="text-sm text-gray-500 mb-4">
+                        계정을 삭제하면 모든 데이터가 영구적으로 삭제되며 복구할 수 없습니다.
+                    </p>
+                    <a href="{% url 'account_delete' %}"
+                       class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        계정 삭제
+                    </a>
                 </div>
             </div>
         </div>

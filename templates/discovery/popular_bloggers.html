@@ -52,6 +52,12 @@
         </nav>
     </div>
 
+    <!-- 타이틀 -->
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">인기 블로거</h1>
+        <p class="mt-2 text-gray-600">최근 30일 동안 활발한 활동을 보인 블로거</p>
+    </div>
+
     <!-- 블로거 목록 -->
     <div class="divide-y divide-gray-100">
         {% for blogger in bloggers %}
@@ -60,8 +66,8 @@
                 <!-- 프로필 이미지 -->
                 <a href="{% url 'user_blog_main' username=blogger.owner.username %}" 
                    class="flex-shrink-0">
-                    {% if blogger.owner.profile_image %}
-                        <img src="{{ blogger.owner.profile_image.url }}"
+                    {% if blogger.owner.get_profile_image %}
+                        <img src="{{ blogger.owner.get_profile_image }}"
                              alt="{{ blogger.owner.username }}"
                              class="w-16 h-16 rounded-full object-cover">
                     {% else %}

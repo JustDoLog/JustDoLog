@@ -1,6 +1,11 @@
 {% extends "discovery/base_post_list.html" %}
 
-{% block show_title %}{% endblock %}
+{% block show_title %}
+<div class="text-center mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">팔로잉</h1>
+    <p class="mt-2 text-gray-600">내가 팔로우하는 블로거의 게시글</p>
+</div>
+{% endblock %}
 
 {% block empty_message %}
 {% if following_count > 0 %}

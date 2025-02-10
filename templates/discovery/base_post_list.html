@@ -68,8 +68,8 @@
                     <div class="flex items-center mb-2">
                         <a href="{% url 'user_blog_main' username=post.blog.owner.username %}" 
                            class="flex items-center group">
-                            {% if post.blog.owner.profile_image %}
-                                <img src="{{ post.blog.owner.profile_image.url }}"
+                            {% if post.blog.owner.get_profile_image %}
+                                <img src="{{ post.blog.owner.get_profile_image }}"
                                      alt="{{ post.blog.owner.username }}"
                                      class="w-8 h-8 rounded-full object-cover">
                             {% else %}

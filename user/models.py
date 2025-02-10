@@ -1,6 +1,13 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 import uuid
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from allauth.socialaccount.models import SocialAccount
+from urllib.request import urlretrieve
+from django.core.files import File
+import tempfile
+import os
 
 
 def profile_image_path(instance, filename):
@@ -25,6 +32,11 @@ class CustomUser(AbstractUser):
         null=True,
         blank=True,
         verbose_name="프로필 이미지",
+    )
+    profile_image_url = models.URLField(
+        blank=True,
+        null=True,
+        verbose_name="프로필 이미지 URL"
     )
     nickname = models.CharField(max_length=100, blank=True)
     bio = models.CharField(max_length=255, blank=True)
@@ -58,6 +70,15 @@ class CustomUser(AbstractUser):
     def get_following_count(self):
         return self.following.count()    
 
+    @property
+    def get_profile_image(self):
+        """프로필 이미지 URL 반환 (로컬 이미지 또는 소셜 이미지)"""
+        if self.profile_image:
+            return self.profile_image.url
+        elif self.profile_image_url:
+            return self.profile_image_url
+        return None
+
 
 class Follow(models.Model):
     follower = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="following")
@@ -80,3 +101,18 @@ class Follow(models.Model):
 
     def __str__(self):
         return f"{self.follower.username} follows {self.following.username}"    
+
+
+@receiver(post_save, sender=SocialAccount)
+def save_profile_image_url(sender, instance, created, **kwargs):
+    if created:
+        user = instance.user
+        if not user.profile_image and not user.profile_image_url:
+            if instance.provider == 'google':
+                picture_url = instance.extra_data.get('picture')
+            elif instance.provider == 'github':
+                picture_url = instance.extra_data.get('avatar_url')
+            
+            if picture_url:
+                user.profile_image_url = picture_url
+                user.save()    

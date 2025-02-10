@@ -17,6 +17,10 @@ JustDoLog는 개발자들을 위한 심플하고 강력한 블로깅 플랫폼�
   - [파일 스토리지 (MinIO)](#파일-스토리지-minio)
     - [MinIO 설정](#minio-설정)
     - [버킷 설정](#버킷-설정)
+  - [소셜 로그인 설정](#소셜-로그인-설정)
+    - [Google OAuth 설정](#google-oauth-설정)
+    - [GitHub OAuth 설정](#github-oauth-설정)
+    - [Django Admin 설정](#django-admin-설정)
   - [Docker 사용하기](#docker-사용하기)
     - [개발 환경](#개발-환경)
     - [프로덕션 환경](#프로덕션-환경)
@@ -254,6 +258,51 @@ docker-compose -f docker-compose.prod.yml up -d
   2. HTTPS를 활성화
   3. 적절한 버킷 정책을 설정
   4. 정기적인 백업 구성
+
+## 소셜 로그인 설정
+
+### Google OAuth 설정
+1. [Google Cloud Console](https://console.cloud.google.com/)에서 새 프로젝트 생성
+2. OAuth 2.0 클라이언트 ID 생성
+   - 승인된 리디렉션 URI: `http://localhost:8000/accounts/google/login/callback/`
+3. 발급받은 클라이언트 ID와 시크릿을 `.env.dev`에 설정
+   ```
+   GOOGLE_CLIENT_ID=your-client-id
+   GOOGLE_CLIENT_SECRET=your-client-secret
+   ```
+
+### GitHub OAuth 설정
+1. [GitHub Developer Settings](https://github.com/settings/developers)에서 새 OAuth 앱 생성
+2. Authorization callback URL: `http://localhost:8000/accounts/github/login/callback/`
+3. 발급받은 클라이언트 ID와 시크릿을 `.env.dev`에 설정
+   ```
+   GITHUB_CLIENT_ID=your-client-id
+   GITHUB_CLIENT_SECRET=your-client-secret
+   ```
+
+### Django Admin 설정
+소셜 로그인을 사용하기 위해서는 Django Admin에서 추가 설정이 필요합니다:
+
+1. 관리자 계정으로 Django Admin (`http://localhost:8000/admin`) 접속
+2. Sites 섹션에서 기본 사이트의 도메인을 "localhost:8000"으로 변경
+3. Social Applications 섹션에서 소셜 앱 추가
+   - Google 설정:
+     - Provider: Google
+     - Name: Google
+     - Client ID: .env.dev의 GOOGLE_CLIENT_ID 값
+     - Secret key: .env.dev의 GOOGLE_CLIENT_SECRET 값
+     - Sites: localhost:8000 선택
+   - GitHub 설정:
+     - Provider: GitHub
+     - Name: GitHub
+     - Client ID: .env.dev의 GITHUB_CLIENT_ID 값
+     - Secret key: .env.dev의 GITHUB_CLIENT_SECRET 값
+     - Sites: localhost:8000 선택
+
+> **Note**: 환경 변수로 설정한 값을 Django Admin에서도 설정해야 하는 이유
+> - Django allauth는 데이터베이스에 저장된 소셜 앱 설정을 우선적으로 사용
+> - settings.py의 SOCIALACCOUNT_PROVIDERS는 기본값으로만 작동
+> - 여러 소셜 앱 설정을 동적으로 관리하기 위한 설계
 
 ## Docker 사용하기
 

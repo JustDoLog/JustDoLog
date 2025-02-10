@@ -1,13 +1,19 @@
 from django.views.generic import TemplateView, View
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import redirect, get_object_or_404
-from django.contrib.auth import get_user_model
+from django.shortcuts import redirect, get_object_or_404, render
+from django.contrib.auth import get_user_model, logout
 from django.http import HttpResponseRedirect, HttpResponse
 from django.urls import reverse
 from .models import Follow
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.template.loader import render_to_string
+from django.contrib import messages
+from django.core.files.storage import default_storage
+from django.conf import settings
+import boto3
+from botocore.client import Config
+import uuid
 
 User = get_user_model()
 
@@ -53,26 +59,63 @@ class FollowUserView(LoginRequiredMixin, View):
 @require_POST
 def upload_profile_image(request):
     if 'profile_image' in request.FILES:
-        request.user.profile_image = request.FILES['profile_image']
-        request.user.save()
+        file = request.FILES['profile_image']
         
-        # Return the updated profile image section
-        html = render_to_string('account/partials/profile_image.html', {'user': request.user})
-        return HttpResponse(html)
+        if not file.content_type.startswith("image/"):
+            return HttpResponse("Invalid file type", status=400)
+            
+        # 파일 이름 생성 (UUID + 원본 확장자)
+        ext = file.name.split(".")[-1]
+        filename = f"{uuid.uuid4()}.{ext}"
+        filepath = f"user/profiles/images/{filename}"
+        
+        try:
+            # MinIO 클라이언트 초기화
+            s3_client = boto3.client(
+                's3',
+                endpoint_url=settings.AWS_S3_ENDPOINT_URL,
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                config=Config(signature_version='s3v4'),
+                region_name='us-east-1',
+                verify=False
+            )
+            
+            # 파일 저장
+            saved_path = default_storage.save(filepath, file)
+            
+            # 기존 이미지 삭제
+            if request.user.profile_image:
+                request.user.profile_image.delete()
+            
+            # URL 생성 및 저장
+            file_url = f"http://localhost:9000/{settings.AWS_STORAGE_BUCKET_NAME}/{saved_path}"
+            request.user.profile_image_url = file_url
+            request.user.save()
+            
+            # 업데이트된 프로필 이미지 섹션 반환
+            html = render_to_string('account/partials/profile_image.html', {'user': request.user})
+            return HttpResponse(html)
+            
+        except Exception as e:
+            return HttpResponse(str(e), status=500)
+            
     return HttpResponse(status=400)
 
 @login_required
 @require_POST
 def remove_profile_image(request):
-    if request.user.profile_image:
-        request.user.profile_image.delete()
-        request.user.profile_image = None
-        request.user.save()
-        
-        # Return the updated profile image section
-        html = render_to_string('account/partials/profile_image.html', {'user': request.user})
-        return HttpResponse(html)
-    return HttpResponse(status=400)
+    user = request.user
+    if user.profile_image:
+        user.profile_image.delete()
+        user.profile_image = None
+    if user.profile_image_url:
+        user.profile_image_url = None
+    user.save()
+    
+    # Return the updated profile image section
+    html = render_to_string('account/partials/profile_image.html', {'user': request.user})
+    return HttpResponse(html)
 
 @login_required
 def toggle_edit_mode(request):
@@ -100,3 +143,44 @@ def update_profile(request):
         'is_edit_mode': False
     })
     return HttpResponse(html)
+
+@login_required
+def profile_view(request):
+    return render(request, "account/profile.html")
+
+@login_required
+def profile_image_upload(request):
+    if request.method == "POST" and request.FILES.get("profile_image"):
+        request.user.profile_image = request.FILES["profile_image"]
+        request.user.save()
+        return render(request, "account/partials/profile_image.html")
+    return HttpResponse(status=400)
+
+@login_required
+def profile_form(request):
+    is_edit_mode = request.GET.get("edit") == "true"
+    return render(request, "account/partials/profile_form.html", {
+        "is_edit_mode": is_edit_mode
+    })
+
+@login_required
+def profile_update(request):
+    if request.method == "POST":
+        blog = request.user.blog
+        blog.title = request.POST.get("blog_title", "")
+        blog.description = request.POST.get("blog_description", "")
+        blog.save()
+        return render(request, "account/partials/profile_form.html", {
+            "is_edit_mode": False
+        })
+    return HttpResponse(status=400)
+
+@login_required
+def account_delete(request):
+    if request.method == "POST":
+        user = request.user
+        logout(request)
+        user.delete()
+        messages.success(request, "계정이 성공적으로 삭제되었습니다.")
+        return redirect("trending_day")
+    return render(request, "account/account_delete.html")

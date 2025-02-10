@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django.contrib.sites",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -158,6 +159,7 @@ SOCIALACCOUNT_LOGIN_ON_GET = True  # 소셜 로그인 중간 페이지 건너뛰
 ACCOUNT_AUTHENTICATION_METHOD = "email"  # 로그인 인증 방식을 이메일로 설정
 ACCOUNT_UNIQUE_EMAIL = True  # 이메일 중복 방지
 SOCIALACCOUNT_AUTO_SIGNUP = True  # 소셜 계정으로 로그인 시 자동 회원가입
+
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "SCOPE": [
@@ -167,12 +169,16 @@ SOCIALACCOUNT_PROVIDERS = {
         "AUTH_PARAMS": {
             "access_type": "online",
         },
+        "CLIENT_ID": os.getenv("GOOGLE_CLIENT_ID"),
+        "SECRET": os.getenv("GOOGLE_CLIENT_SECRET"),
     },
     "github": {
         "SCOPE": [
             "user",
             "email",
         ],
+        "CLIENT_ID": os.getenv("GITHUB_CLIENT_ID"),
+        "SECRET": os.getenv("GITHUB_CLIENT_SECRET"),
     },
 }
 
