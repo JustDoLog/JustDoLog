@@ -10,10 +10,12 @@ charset-normalizer==3.4.1
 cryptography==44.0.0
 Django==5.1.6
 django-allauth==65.4.0
+django-contrib-comments==2.2.0
 django-storages==1.14.4
 django-taggit==6.1.0
 django-tinymce==4.1.0
 Faker==35.2.0
+freezegun==1.5.1
 idna==3.10
 jmespath==1.0.1
 minio==7.2.15

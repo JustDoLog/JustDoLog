@@ -18,24 +18,28 @@ class TrendingPostsView(ListView):
     context_object_name = "posts"
     paginate_by = 10
 
-    # period query parameter: day, week, month, year
     def get_queryset(self):
         period = self.request.GET.get("period", "day")
-        now = timezone.now()
-
+        today = timezone.now().date()
+        
+        # 기본 쿼리셋: published 상태인 게시글
+        queryset = Post.objects.filter(status="published")
+        
+        # 기간별 필터링
         if period == "day":
-            start_date = now - timedelta(days=1)
+            queryset = queryset.filter(updated_at__date=today)
         elif period == "week":
-            start_date = now - timedelta(weeks=1)
+            start_date = today - timedelta(days=7)
+            queryset = queryset.filter(updated_at__date__gte=start_date)
         elif period == "month":
-            start_date = now - timedelta(days=30)
+            start_date = today - timedelta(days=30)
+            queryset = queryset.filter(updated_at__date__gte=start_date)
         else:  # year
-            start_date = now - timedelta(days=365)
-
-        # TODO: 트렌딩 알고리즘 구현 (현재는 임시로 최신순)
-        return Post.objects.filter(
-            created_at__gte=start_date, status="published"
-        ).order_by("-created_at")
+            start_date = today - timedelta(days=365)
+            queryset = queryset.filter(updated_at__date__gte=start_date)
+        
+        # 좋아요 순, 최신순으로 정렬
+        return queryset.order_by("-likes", "-updated_at")
 
 
 class RecentPostsView(ListView):
@@ -45,7 +49,7 @@ class RecentPostsView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        return Post.objects.filter(status="published").order_by("-created_at")
+        return Post.objects.filter(status="published").order_by("-updated_at")
 
 
 class LikedPostsView(LoginRequiredMixin, ListView):
@@ -86,7 +90,7 @@ class PopularBloggersView(ListView):
             # 최근 30일 동안 작성한 게시글 수
             recent_posts_count=Count(
                 'posts',
-                filter=models.Q(posts__created_at__gte=thirty_days_ago)
+                filter=models.Q(posts__updated_at__gte=thirty_days_ago)
             ),
             # 최근 30일 동안 받은 좋아요 수
             recent_likes_count=Count(
@@ -146,13 +150,13 @@ class SearchView(ListView):
         if settings.DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
             search_query = SearchQuery(query, config="simple")
             return base_queryset.filter(search_vector=search_query).order_by(
-                "-created_at"
+                "-updated_at"
             )
 
         # SQLite3 등 다른 데이터베이스의 경우 icontains 사용
         return base_queryset.filter(
             Q(title__icontains=query) | Q(content__icontains=query)
-        ).order_by("-created_at")
+        ).order_by("-updated_at")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -176,7 +180,7 @@ class FollowingPostsView(LoginRequiredMixin, ListView):
         return Post.objects.filter(
             blog__owner__in=following_users,
             status="published"
-        ).order_by("-created_at")
+        ).order_by("-updated_at")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -198,7 +202,7 @@ class TaggedPostsView(ListView):
         return Post.objects.filter(
             tags__name__in=[tag_name],
             status="published"
-        ).order_by('-created_at')
+        ).order_by('-updated_at')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
