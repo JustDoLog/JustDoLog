@@ -143,23 +143,24 @@ class DiscoveryViewTests(TestCase):
     @freeze_time("2024-03-15 12:00:00")
     def test_popular_bloggers_view(self):
         """인기 블로거 뷰 테스트"""
+        # 로그인
+        self.client.login(username='testuser', password='testpass123')
+
         # 팔로우 관계 생성
         Follow.objects.create(follower=self.user, following=self.other_user)
         
-        # 뷰 호출
         response = self.client.get(reverse('popular_bloggers'))
         
-        # 응답 확인
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'discovery/popular_bloggers.html')
         
-        # 블로거 목록 확인
+        # 컨텍스트 데이터 확인
         bloggers = response.context['bloggers']
         self.assertTrue(len(bloggers) > 0)
         
-        # 팔로우 상태 확인
+        # 다른 사용자의 블로그가 결과에 포함되어 있는지 확인
         other_user_blog = next(
-            (blog for blog in bloggers if blog.owner_id == self.other_user.id),
+            (blogger for blogger in bloggers if blogger.owner == self.other_user),
             None
         )
         self.assertIsNotNone(other_user_blog)

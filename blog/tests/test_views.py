@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-from blog.models import Post, PostRead, PostLike
+from blog.models import Post, PostRead, PostLike, Blog
 from user.models import Follow
 from django.utils.text import slugify
 from freezegun import freeze_time
@@ -529,3 +529,87 @@ class HtmxResponseMixinTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('HX-Trigger', response.headers)
         self.assertIn('likesUpdated', response.headers['HX-Trigger']) 
+
+class PostDetailViewTest(TestCase):
+    def setUp(self):
+        # 테스트 사용자 생성
+        self.user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpass123'
+        )
+        self.other_user = User.objects.create_user(
+            username='otheruser',
+            email='other@example.com',
+            password='testpass123'
+        )
+        
+        # Blog는 User 생성 시 자동으로 생성되므로 따로 생성하지 않음
+        self.blog = self.user.blog  # 직접 접근
+        
+        # 테스트 포스트 생성
+        self.post = Post.objects.create(
+            title='Test Post',
+            content='Test Content',
+            blog=self.blog,
+            author=self.user,
+            status='published'
+        )
+        
+        self.client = Client()
+        
+        # URL 패턴
+        self.post_url = reverse('user_post_detail', kwargs={
+            'username': self.user.username,
+            'slug': self.post.slug
+        })
+
+    def test_post_detail_edit_delete_buttons_for_author(self):
+        """작성자로 로그인했을 때 수정/삭제 버튼이 보이는지 테스트"""
+        self.client.login(username='testuser', password='testpass123')
+        response = self.client.get(self.post_url)
+        
+        self.assertEqual(response.status_code, 200)
+        # 수정 버튼 URL이 포함되어 있는지 확인
+        self.assertContains(
+            response,
+            reverse('user_post_update', kwargs={'username': self.user.username, 'slug': self.post.slug})
+        )
+        # 삭제 버튼 URL이 포함되어 있는지 확인
+        self.assertContains(
+            response,
+            reverse('user_post_delete', kwargs={'username': self.user.username, 'slug': self.post.slug})
+        )
+
+    def test_post_detail_no_edit_delete_buttons_for_other_user(self):
+        """다른 사용자로 로그인했을 때 수정/삭제 버튼이 보이지 않는지 테스트"""
+        self.client.login(username='otheruser', password='testpass123')
+        response = self.client.get(self.post_url)
+        
+        self.assertEqual(response.status_code, 200)
+        # 수정 버튼 URL이 없는지 확인
+        self.assertNotContains(
+            response,
+            reverse('user_post_update', kwargs={'username': self.user.username, 'slug': self.post.slug})
+        )
+        # 삭제 버튼 URL이 없는지 확인
+        self.assertNotContains(
+            response,
+            reverse('user_post_delete', kwargs={'username': self.user.username, 'slug': self.post.slug})
+        )
+
+    def test_post_detail_no_edit_delete_buttons_for_anonymous(self):
+        """비로그인 사용자일 때 수정/삭제 버튼이 보이지 않는지 테스트"""
+        response = self.client.get(self.post_url)
+        
+        self.assertEqual(response.status_code, 200)
+        # 수정 버튼 URL이 없는지 확인
+        self.assertNotContains(
+            response,
+            reverse('user_post_update', kwargs={'username': self.user.username, 'slug': self.post.slug})
+        )
+        # 삭제 버튼 URL이 없는지 확인
+        self.assertNotContains(
+            response,
+            reverse('user_post_delete', kwargs={'username': self.user.username, 'slug': self.post.slug})
+        ) 

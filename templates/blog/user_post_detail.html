@@ -46,9 +46,24 @@
                     {{ post.created_at|date:"Y년 m월 d일" }}
                 </span>
             </div>
+        </div>
 
-            <!-- 팔로우 버튼 -->
-            {% if user.is_authenticated and user != post.blog.owner %}
+        <!-- 우측 버튼 영역 -->
+        {% if user.is_authenticated %}
+            {% if user == post.blog.owner %}
+                <!-- 수정/삭제 버튼 -->
+                <div class="flex items-center gap-2">
+                    <a href="{% url 'user_post_update' username=post.blog.owner.username slug=post.slug %}"
+                        class="px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors">
+                        수정
+                    </a>
+                    <a href="{% url 'user_post_delete' username=post.blog.owner.username slug=post.slug %}"
+                        class="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors">
+                        삭제
+                    </a>
+                </div>
+            {% else %}
+                <!-- 팔로우 버튼 -->
                 <button hx-post="{% url 'follow_user' username=post.blog.owner.username %}"
                         hx-swap="outerHTML"
                         hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
@@ -60,7 +75,7 @@
                     {% endif %}
                 </button>
             {% endif %}
-        </div>
+        {% endif %}
     </div>
 
     <!-- 포스트 메타 정보 -->
