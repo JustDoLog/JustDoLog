@@ -190,7 +190,7 @@ TINYMCE_DEFAULT_CONFIG = {
     "plugins": (
         "advlist autolink lists link image charmap preview anchor searchreplace "
         "visualblocks code fullscreen insertdatetime media table code help wordcount "
-        "quickbars emoticons"
+        "quickbars emoticons codesample"
     ),
     "toolbar": (
         "undo redo | bold italic underline strikethrough | fontselect fontsizeselect formatselect | "
@@ -201,6 +201,16 @@ TINYMCE_DEFAULT_CONFIG = {
     ),
     "custom_undo_redo_levels": 10,
     "language": "ko_KR",
+    # 코드 샘플 설정 추가
+    "codesample_languages": [
+        {"text": "Python", "value": "language-python"},
+        {"text": "JavaScript", "value": "language-javascript"},
+        {"text": "HTML/XML", "value": "language-markup"},
+        {"text": "CSS", "value": "language-css"},
+        {"text": "Bash", "value": "language-bash"},
+        {"text": "JSON", "value": "language-json"}
+    ],
+    "codesample_global_prismjs": True,
     # 이미지 업로드 관련 설정
     "images_upload_url": "upload_image",
     "automatic_uploads": True,
@@ -245,6 +255,16 @@ TINYMCE_DEFAULT_CONFIG = {
             border-radius: 3px;
             padding: 0.2em 0.4em;
             font-family: monospace;
+        }
+        /* 코드 블록 스타일링 추가 */
+        pre[class*="language-"] {
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin: 1em 0;
+        }
+        code[class*="language-"] {
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
         }
         img {
             max-width: 100%;

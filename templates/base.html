@@ -173,6 +173,32 @@
         }
         [x-cloak] { display: none !important; }
     </style>
+    <!-- Prism.js CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.css" rel="stylesheet" />
+    <style>
+        /* 코드 블록 스타일링 */
+        pre[class*="language-"] {
+            max-height: 500px;
+            overflow-y: auto;
+            margin: 1.5em 0;
+            border-radius: 8px;
+            background: #2d2d2d !important;  /* 배경색 강제 지정 */
+        }
+        code[class*="language-"] {
+            font-family: 'Fira Code', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #ccc !important;  /* 기본 텍스트 색상 */
+        }
+        
+        /* Python 구문 강조 스타일 */
+        .token.keyword { color: #cc99cd !important; }
+        .token.string { color: #7ec699 !important; }
+        .token.number { color: #f08d49 !important; }
+        .token.function { color: #f8c555 !important; }
+        .token.comment { color: #999 !important; }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="min-h-screen flex flex-col bg-white antialiased" x-data="layout">
@@ -384,5 +410,33 @@
             }
         }
     </script>
+    <!-- Prism.js 스크립트들 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/toolbar/prism-toolbar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/copy-to-clipboard/prism-copy-to-clipboard.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-regex.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // TinyMCE codesample 클래스 이름 처리
+            document.querySelectorAll('pre').forEach(pre => {
+                const code = pre.querySelector('code');
+                if (code) {
+                    const lang = code.className.replace('language-', '');
+                    if (lang) {
+                        pre.className = `language-${lang}`;
+                        code.className = `language-${lang}`;
+                    }
+                }
+            });
+            Prism.highlightAll();
+        });
+    </script>
+    {% block extra_scripts %}{% endblock %}
 </body>
 </html> 
