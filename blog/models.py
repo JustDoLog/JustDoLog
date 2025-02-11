@@ -6,7 +6,8 @@ from django.contrib.postgres.search import SearchVectorField
 from django.contrib.postgres.indexes import GinIndex
 from bs4 import BeautifulSoup
 from taggit.managers import TaggableManager
-from django.db.models import Count, Q, Prefetch, F
+from django.db.models import Count, Q, Prefetch, F, Sum, ExpressionWrapper, FloatField
+from django.db.models.functions import Cast
 from taggit.models import Tag
 from django.utils import timezone
 from datetime import timedelta
@@ -60,24 +61,22 @@ class BlogManager(models.Manager):
             total_views=Count('posts__views')
         )
     
-    def popular(self, days=30):
-        """인기 블로거의 블로그 목록"""
-        period_start = timezone.now() - timedelta(days=days)
-        return self.get_queryset().annotate(
-            followers_count=Count('owner__followers'),
-            recent_posts_count=Count(
-                'posts',
-                filter=Q(posts__updated_at__gte=period_start)
-            ),
-            recent_likes_count=Count(
-                'posts__postlike',
-                filter=Q(posts__postlike__created_at__gte=period_start)
+    def popular(self):
+        """인기 블로거 조회 최적화"""
+        return self.annotate(
+            posts_count=Count('posts', filter=Q(posts__status='published')),
+            views_count=Sum('posts__views', filter=Q(posts__status='published'), default=0),
+            likes_count=Sum('posts__likes', filter=Q(posts__status='published'), default=0),
+            engagement_score=ExpressionWrapper(
+                (F('views_count') + F('likes_count') * 2) / 
+                Cast(F('posts_count'), output_field=FloatField()),
+                output_field=FloatField()
             )
-        ).filter(posts__isnull=False).distinct().order_by(
-            '-followers_count',
-            '-recent_posts_count',
-            '-recent_likes_count'
-        )
+        ).filter(
+            posts_count__gt=0  # 게시글이 있는 블로그만
+        ).select_related(
+            'owner'  # owner 정보 미리 로드
+        ).order_by('-engagement_score')
     
     def with_tags(self):
         """태그 정보를 포함한 블로그 queryset 반환"""
@@ -101,6 +100,11 @@ class Blog(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # 캐시를 위한 집계 필드 추가
+    total_posts = models.IntegerField(default=0)
+    total_views = models.IntegerField(default=0)
+    total_likes = models.IntegerField(default=0)
+
     objects = BlogManager()
 
     def __str__(self):
@@ -114,6 +118,18 @@ class Blog(models.Model):
         ).annotate(
             posts_count=Count('post', filter=models.Q(post__status='published'))
         ).order_by('-posts_count', 'name')
+
+    def update_stats(self):
+        """블로그 통계 업데이트"""
+        stats = self.posts.filter(status='published').aggregate(
+            total_posts=Count('id'),
+            total_views=Sum('views'),
+            total_likes=Sum('likes')
+        )
+        
+        for field, value in stats.items():
+            setattr(self, field, value or 0)
+        self.save(update_fields=list(stats.keys()))
 
 
 class Post(models.Model):

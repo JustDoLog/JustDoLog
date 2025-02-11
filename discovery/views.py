@@ -10,6 +10,7 @@ from django.db import models
 from datetime import timedelta
 from blog.models import Post, Blog, PostLike, PostRead
 from user.models import Follow
+from django.core.cache import cache
 
 
 class TrendingPostsView(ListView):
@@ -67,32 +68,38 @@ class RecentReadPostsView(LoginRequiredMixin, ListView):
 class PopularBloggersView(ListView):
     template_name = 'discovery/popular_bloggers.html'
     context_object_name = 'bloggers'
-
+    
     def get_queryset(self):
-        # 새로운 BlogManager의 popular() 메서드 사용
-        queryset = Blog.objects.popular()[:10]
-
-        # 로그인한 사용자의 팔로잉 정보를 prefetch
+        # 캐시 키 생성
+        cache_key = 'popular_bloggers'
+        queryset = cache.get(cache_key)
+        
+        if queryset is None:
+            # 기본 쿼리 실행
+            queryset = list(Blog.objects.popular()[:10])  # list로 평가
+            
+            # 결과 캐싱 (1시간)
+            cache.set(cache_key, queryset, 60 * 60)
+        
+        # 로그인한 사용자의 팔로잉 정보 처리
         if self.request.user.is_authenticated:
-            queryset = queryset.prefetch_related(
-                models.Prefetch(
-                    'owner__followers',
-                    queryset=Follow.objects.filter(follower=self.request.user),
-                    to_attr='is_followed_by_user'
-                )
-            )
+            following_ids = set(Follow.objects.filter(
+                follower=self.request.user
+            ).values_list('following_id', flat=True))
+            
+            # 각 블로거의 팔로잉 상태를 미리 계산
+            for blog in queryset:
+                blog.is_followed = blog.owner_id in following_ids
+        else:
+            # 비로그인 사용자는 모두 False로 설정
+            for blog in queryset:
+                blog.is_followed = False
         
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.request.user.is_authenticated:
-            # 각 블로거의 팔로잉 상태를 context에 추가
-            following_dict = {
-                follow.following_id: True 
-                for follow in Follow.objects.filter(follower=self.request.user)
-            }
-            context['following_dict'] = following_dict
+        context['user_is_authenticated'] = self.request.user.is_authenticated
         return context
 
 

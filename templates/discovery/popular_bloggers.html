@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load static %}
-{% load discovery_tags %}
 
 {% block title %}인기 블로거{% endblock %}
 
@@ -103,8 +102,8 @@
                                         hx-swap="outerHTML"
                                         hx-target="#follow-button-{{ blogger.owner.username }}"
                                         hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                                        class="{% if following_dict|get_item:blogger.owner.id %}bg-gray-900 text-white hover:bg-gray-800{% else %}text-gray-900 bg-white border border-gray-900 hover:bg-gray-50{% endif %} px-6 py-2 text-sm font-medium rounded-full transition-colors">
-                                    {% if following_dict|get_item:blogger.owner.id %}
+                                        class="{% if blogger.is_followed %}bg-gray-900 text-white hover:bg-gray-800{% else %}text-gray-900 bg-white border border-gray-900 hover:bg-gray-50{% endif %} px-6 py-2 text-sm font-medium rounded-full transition-colors">
+                                    {% if blogger.is_followed %}
                                         팔로잉
                                     {% else %}
                                         팔로우

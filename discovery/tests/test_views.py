@@ -143,17 +143,27 @@ class DiscoveryViewTests(TestCase):
     @freeze_time("2024-03-15 12:00:00")
     def test_popular_bloggers_view(self):
         """인기 블로거 뷰 테스트"""
-        response = self.client.get(reverse('popular_bloggers'))
-        self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'discovery/popular_bloggers.html')
-
-        # 팔로워 추가
+        # 팔로우 관계 생성
         Follow.objects.create(follower=self.user, following=self.other_user)
         
-        # 로그인 상태에서 팔로잉 정보 확인
-        self.client.login(username='testuser', password='testpass123')
+        # 뷰 호출
         response = self.client.get(reverse('popular_bloggers'))
-        self.assertTrue(response.context['following_dict'][self.other_user.id])
+        
+        # 응답 확인
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'discovery/popular_bloggers.html')
+        
+        # 블로거 목록 확인
+        bloggers = response.context['bloggers']
+        self.assertTrue(len(bloggers) > 0)
+        
+        # 팔로우 상태 확인
+        other_user_blog = next(
+            (blog for blog in bloggers if blog.owner_id == self.other_user.id),
+            None
+        )
+        self.assertIsNotNone(other_user_blog)
+        self.assertTrue(other_user_blog.is_followed)  # following_dict 대신 is_followed 확인
 
     @freeze_time("2024-03-15 12:00:00")
     def test_search_view(self):

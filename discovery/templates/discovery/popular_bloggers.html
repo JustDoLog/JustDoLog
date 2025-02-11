@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-8">인기 블로거</h1>
+    
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {% for blogger in bloggers %}
+        <div class="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
+            <div class="flex items-center space-x-4">
+                <img src="{{ blogger.owner.profile_image.url }}" 
+                     alt="{{ blogger.owner.username }}'s profile" 
+                     class="w-16 h-16 rounded-full object-cover">
+                <div class="flex-1">
+                    <h2 class="text-xl font-semibold text-gray-900">
+                        <a href="{% url 'blog:blog_detail' username=blogger.owner.username %}" 
+                           class="hover:text-blue-600">
+                            {{ blogger.title }}
+                        </a>
+                    </h2>
+                    <p class="text-gray-500">@{{ blogger.owner.username }}</p>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <p class="text-gray-600 line-clamp-2">{{ blogger.description }}</p>
+            </div>
+            
+            <div class="mt-6 flex items-center justify-between">
+                <div class="flex space-x-4 text-sm text-gray-500">
+                    <span>포스트 {{ blogger.posts_count|intcomma }}</span>
+                    <span>조회 {{ blogger.views_count|intcomma }}</span>
+                    <span>좋아요 {{ blogger.likes_count|intcomma }}</span>
+                </div>
+                
+                {% if user_is_authenticated and user != blogger.owner %}
+                <button 
+                    hx-post="{% url 'user:toggle_follow' user_id=blogger.owner.id %}"
+                    hx-swap="outerHTML"
+                    class="{% if blogger.is_followed %}bg-gray-900 text-white hover:bg-gray-800{% else %}text-gray-900 bg-white border border-gray-900 hover:bg-gray-50{% endif %} px-6 py-2 text-sm font-medium rounded-full transition-colors">
+                    {% if blogger.is_followed %}
+                        팔로잉
+                    {% else %}
+                        팔로우
+                    {% endif %}
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %} 
