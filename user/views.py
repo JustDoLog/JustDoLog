@@ -4,8 +4,10 @@ from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model, logout
 from django.http import HttpResponse
 from django.urls import reverse, reverse_lazy
-from .models import Follow
 from django.contrib import messages
+from django.conf import settings
+import os
+from .models import Follow
 
 User = get_user_model()
 
@@ -21,6 +23,30 @@ class ProfileEditView(LoginRequiredMixin, UpdateView):
 
     def get_object(self, queryset=None):
         return self.request.user
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # 개발 환경에서는 STATICFILES_DIRS에서 이미지 찾기
+        if settings.DEBUG:
+            for static_dir in settings.STATICFILES_DIRS:
+                profile_images_dir = os.path.join(static_dir, 'images/default_profile')
+                if os.path.exists(profile_images_dir):
+                    break
+        else:
+            # 프로덕션 환경에서는 STATIC_ROOT 사용
+            profile_images_dir = os.path.join(settings.STATIC_ROOT, 'images/default_profile')
+        
+        if os.path.exists(profile_images_dir):
+            profile_images = sorted([
+                f for f in os.listdir(profile_images_dir)
+                if f.startswith('profile_') and f.endswith('.jpg')
+            ], key=lambda x: int(x.split('_')[1].split('.')[0]))
+            context['profile_images'] = profile_images
+        else:
+            context['profile_images'] = []
+            
+        return context
 
     def form_valid(self, form):
         user = form.instance
