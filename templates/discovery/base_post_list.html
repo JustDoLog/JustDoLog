@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% load static %}
+{% load blog_tags %}
 
 {% block extra_head %}
 <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-<script src="{% static 'js/like-handler.js' %}"></script>
 {% endblock %}
 
 {% block content %}
@@ -100,9 +100,11 @@
                     <div class="flex items-center justify-between text-sm text-gray-500">
                         <div class="flex flex-col gap-2">
                             <div class="flex items-center space-x-4">
-                                <span>{{ post.created_at|date:"Y년 m월 d일" }}</span>
-                                <span>조회수 {{ post.views }}</span>
-                                <span class="post-likes-count">좋아요 {{ post.likes }}</span>
+                                    <span>{{ post.created_at|date:"Y년 m월 d일" }}</span>
+                                    <span>조회수 {{ post.views }}</span>
+                                    <span id="likes-count-{{ post.slug }}"           hx-swap-oob="true" class="post-likes-count">
+                                        좋아요 {{ post.likes }}
+                                    </span>
                             </div>
                             {% if post.tags.all %}
                             <div class="flex items-center space-x-2">
@@ -117,22 +119,7 @@
                         </div>
                         
                         <!-- 좋아요 버튼 -->
-                        <button class="like-button flex items-center text-gray-500 hover:text-gray-900 transition-colors {% if post in user.liked_posts.all %}text-gray-900{% endif %}"
-                                {% if user.is_authenticated %}
-                                    hx-post="{% url 'toggle_like' username=post.blog.owner.username slug=post.slug %}"
-                                    hx-swap="none"
-                                    hx-trigger="click"
-                                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                                {% else %}
-                                    onclick="window.location.href='{% url 'account_login' %}?next={{ request.path }}'"
-                                {% endif %}>
-                            <svg class="w-5 h-5" fill="{% if post in user.liked_posts.all %}currentColor{% else %}none{% endif %}" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
-                                      d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
-                                </path>
-                            </svg>
-                            <span class="likes-count ml-1">{{ post.likes }}</span>
-                        </button>
+                        {% include "blog/like_button.html" with post=post has_liked=post|is_liked_by:user%}                         
                     </div>
                 </div>
 
@@ -178,8 +165,5 @@
         </nav>
     </div>
     {% endif %}
-
-    <!-- JavaScript for handling likes -->
-    <script src="{% static 'js/like-handler.js' %}"></script>
 </div>
 {% endblock %}

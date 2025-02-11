@@ -1,0 +1,16 @@
+<div class="flex items-center" id="like-button-{{ post.slug }}">
+    <button class="like-button flex items-center text-gray-500 hover:text-gray-900 transition-colors {% if has_liked %}text-gray-900{% endif %}"
+            hx-post="{% url 'toggle_like' username=post.blog.owner.username slug=post.slug %}"
+            hx-swap="outerHTML"
+            hx-target="#like-button-{{ post.slug }}"
+            hx-trigger="click"
+            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+            aria-label="{% if has_liked %}좋아요 취소{% else %}좋아요{% endif %}">
+        <svg class="w-5 h-5" fill="{% if has_liked %}currentColor{% else %}none{% endif %}" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" 
+                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z">
+            </path>
+        </svg>
+        <span class="sr-only">{% if has_liked %}좋아요 취소{% else %}좋아요{% endif %}</span>
+    </button>
+</div>

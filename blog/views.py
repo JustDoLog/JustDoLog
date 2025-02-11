@@ -1,5 +1,12 @@
-from django.views.generic import DetailView, CreateView, UpdateView, DeleteView, ListView, View
-from django.shortcuts import get_object_or_404, redirect
+from django.views.generic import (
+    DetailView,
+    CreateView,
+    UpdateView,
+    DeleteView,
+    ListView,
+    View,
+)
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse, reverse_lazy
 from django.http import JsonResponse, Http404, HttpResponse
@@ -48,41 +55,49 @@ class UserBlogMainView(PaginatedListMixin, UserContextMixin, DetailView):
 
     def get_queryset(self):
         blog = self.get_object()
-        
+
         # 선택된 태그 확인
-        selected_tag = self.request.GET.get('tag')
-        
+        selected_tag = self.request.GET.get("tag")
+
         # 현재 사용자가 블로그 소유자인 경우 draft 포함, 아닌 경우 published만
         if self.request.user == blog.owner:
             posts = Post.objects.filter(blog=blog)
         else:
             posts = Post.objects.filter(blog=blog, status="published")
-        
+
         # 태그로 필터링
         if selected_tag:
             posts = posts.filter(tags__name=selected_tag)
-            
+
         # N+1 쿼리 최적화
-        return posts.select_related('author', 'blog').prefetch_related(
-            'tags',
-            models.Prefetch(
-                'liked_by',
-                queryset=CustomUser.objects.filter(id=self.request.user.id) if self.request.user.is_authenticated else CustomUser.objects.none(),
-                to_attr='user_likes'
+        return (
+            posts.select_related("author", "blog")
+            .prefetch_related(
+                "tags",
+                models.Prefetch(
+                    "liked_by",
+                    queryset=(
+                        CustomUser.objects.filter(id=self.request.user.id)
+                        if self.request.user.is_authenticated
+                        else CustomUser.objects.none()
+                    ),
+                    to_attr="user_likes",
+                ),
             )
-        ).order_by("-created_at")
+            .order_by("-created_at")
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         blog = self.get_object()
-        
+
         # 태그 정보 추가
         context["tags"] = blog.get_tags_with_count()
-        context["selected_tag"] = self.request.GET.get('tag')
-        
+        context["selected_tag"] = self.request.GET.get("tag")
+
         # 게시글 목록 추가
         context["posts"] = self.get_queryset()
-        
+
         return context
 
 
@@ -98,7 +113,7 @@ class UserPostDetailView(PostGetObjectMixin, UserContextMixin, DetailView):
                 self._cached_object = PostService.get_post_detail(
                     username=self.kwargs["username"],
                     slug=self.kwargs["slug"],
-                    user=self.request.user
+                    user=self.request.user,
                 )
             except Post.DoesNotExist as e:
                 raise Http404(str(e))
@@ -111,8 +126,7 @@ class UserPostDetailView(PostGetObjectMixin, UserContextMixin, DetailView):
                 following=context["post"].blog.owner
             ).exists()
             context["has_liked"] = LikeService.get_like_status(
-                self.request.user, 
-                context["post"]
+                self.request.user, context["post"]
             )
         return context
 
@@ -174,11 +188,11 @@ def upload_image(request, username):
     print(f"Files in request: {request.FILES}")
 
     # TinyMCE는 'images' 키를 사용
-    if 'images' not in request.FILES and 'file' not in request.FILES:
+    if "images" not in request.FILES and "file" not in request.FILES:
         return JsonResponse({"error": "No file uploaded"}, status=400)
 
     # TinyMCE의 'images' 키나 일반적인 'file' 키 중 하나를 사용
-    file = request.FILES.get('images') or request.FILES.get('file')
+    file = request.FILES.get("images") or request.FILES.get("file")
     print(f"File name: {file.name}")
     print(f"File size: {file.size}")
     print(f"Content type: {file.content_type}")
@@ -206,45 +220,53 @@ def upload_image(request, username):
         print(f"MinIO bucket name: {settings.AWS_STORAGE_BUCKET_NAME}")
         print(f"AWS access key ID: {settings.AWS_ACCESS_KEY_ID}")
         print(f"Target filepath: {filepath}")
-        
+
         # MinIO 클라이언트 초기화
         s3_client = boto3.client(
-            's3',
+            "s3",
             endpoint_url=settings.AWS_S3_ENDPOINT_URL,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            config=Config(signature_version='s3v4'),
-            region_name='us-east-1',
-            verify=False
+            config=Config(signature_version="s3v4"),
+            region_name="us-east-1",
+            verify=False,
         )
 
         # 버킷 존재 여부 확인
         try:
             print("\n==== Checking Bucket ====")
             s3_client.head_bucket(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
-            print(f"Bucket '{settings.AWS_STORAGE_BUCKET_NAME}' exists and is accessible")
-            
+            print(
+                f"Bucket '{settings.AWS_STORAGE_BUCKET_NAME}' exists and is accessible"
+            )
+
             # 버킷 내용물 나열
             print("\n==== Current Bucket Contents ====")
-            response = s3_client.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
-            for obj in response.get('Contents', []):
+            response = s3_client.list_objects_v2(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME
+            )
+            for obj in response.get("Contents", []):
                 print(f"Found object: {obj['Key']}, Size: {obj['Size']} bytes")
         except Exception as e:
             print(f"Error checking bucket: {str(e)}")
             # 버킷이 없으면 생성 시도
             try:
-                print(f"Attempting to create bucket '{settings.AWS_STORAGE_BUCKET_NAME}'")
+                print(
+                    f"Attempting to create bucket '{settings.AWS_STORAGE_BUCKET_NAME}'"
+                )
                 s3_client.create_bucket(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
                 print("Bucket created successfully")
             except Exception as create_error:
                 print(f"Error creating bucket: {str(create_error)}")
-                return JsonResponse({"error": f"Bucket error: {str(create_error)}"}, status=500)
-        
+                return JsonResponse(
+                    {"error": f"Bucket error: {str(create_error)}"}, status=500
+                )
+
         # 파일 저장
         print("\n==== Saving File ====")
         saved_path = default_storage.save(filepath, file)
         print(f"Saved path: {saved_path}")
-        
+
         # 직접 파일 업로드 시도
         try:
             print("\n==== Direct Upload Attempt ====")
@@ -253,17 +275,19 @@ def upload_image(request, username):
                 file,
                 settings.AWS_STORAGE_BUCKET_NAME,
                 saved_path,
-                ExtraArgs={'ContentType': file.content_type}
+                ExtraArgs={"ContentType": file.content_type},
             )
             print("Direct upload successful")
         except Exception as upload_error:
             print(f"Direct upload error: {str(upload_error)}")
-        
+
         # 파일이 실제로 존재하는지 확인
         try:
             print("\n==== Verifying Upload ====")
             print(f"Checking path: {saved_path}")
-            obj = s3_client.head_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=saved_path)
+            obj = s3_client.head_object(
+                Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=saved_path
+            )
             print(f"File exists in MinIO: Yes")
             print(f"File size in MinIO: {obj['ContentLength']} bytes")
             print(f"File content type: {obj['ContentType']}")
@@ -273,23 +297,25 @@ def upload_image(request, username):
             # 파일 목록 다시 확인
             try:
                 print("\n==== Updated Bucket Contents ====")
-                response = s3_client.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
-                for obj in response.get('Contents', []):
+                response = s3_client.list_objects_v2(
+                    Bucket=settings.AWS_STORAGE_BUCKET_NAME
+                )
+                for obj in response.get("Contents", []):
                     print(f"Found object: {obj['Key']}, Size: {obj['Size']} bytes")
             except Exception as list_error:
                 print(f"Error listing bucket contents: {str(list_error)}")
-            return JsonResponse({"error": f"File verification failed: {str(e)}"}, status=500)
-        
+            return JsonResponse(
+                {"error": f"File verification failed: {str(e)}"}, status=500
+            )
+
         # URL 생성 (버킷명 포함)
         file_url = f"http://{settings.AWS_S3_CUSTOM_DOMAIN}/{settings.AWS_STORAGE_BUCKET_NAME}/{saved_path}"
         print(f"\nGenerated URL: {file_url}")
-        
-        return JsonResponse({
-            "location": file_url,
-            "success": True
-        })
+
+        return JsonResponse({"location": file_url, "success": True})
     except Exception as e:
         import traceback
+
         print(f"\n==== Error Details ====")
         print(f"Error type: {type(e).__name__}")
         print(f"Error message: {str(e)}")
@@ -305,8 +331,7 @@ class UserPostDraftListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         return Post.objects.filter(
-            blog__owner=self.request.user,
-            status="draft"
+            blog__owner=self.request.user, status="draft"
         ).order_by("-created_at")
 
     def get_context_data(self, **kwargs):
@@ -315,26 +340,35 @@ class UserPostDraftListView(LoginRequiredMixin, ListView):
         return context
 
 
-class PostLikeToggleView(LoginRequiredMixin, PostGetObjectMixin, HtmxResponseMixin, View):
-    def post(self, request, *args, **kwargs):
-        post = self.get_object()
-        has_liked, likes_count = LikeService.toggle_like(request.user, post)
-        
-        if not self.is_htmx_request():
-            return HttpResponse('HTMX request required', status=400)
-        
-        response = HttpResponse(
-            f'<button class="like-button" hx-post="{post.get_like_url()}" hx-swap="outerHTML">'
-            f'{"좋아요 취소" if has_liked else "좋아요"} ({likes_count})</button>'
-        )
-        response['HX-Trigger'] = json.dumps({
-            'likesUpdated': {
-                'postId': post.id,
-                'likesCount': likes_count,
-                'hasLiked': has_liked
+class PostLikeToggleView(LoginRequiredMixin, View):
+    def post(self, request, username, slug):
+        try:
+            post = get_object_or_404(Post, blog__owner__username=username, slug=slug)
+            has_liked, likes_count = LikeService.toggle_like(request.user, post)
+
+            context = {
+                "post": post,
+                "has_liked": has_liked,
+                "likes_count": likes_count,
             }
-        })
-        return response
+
+            response_html = render(
+                request, "blog/like_button.html", context
+            ).content.decode()
+            count_html = f'<span id="likes-count-{post.slug}" hx-swap-oob="true">좋아요 {likes_count}</span>'
+
+            return HttpResponse(response_html + count_html)
+
+        except Exception as e:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.error(f"Like toggle error: {str(e)}")
+            return HttpResponse(
+                status=500,
+                content=json.dumps({"error": "좋아요 처리 중 오류가 발생했습니다."}),
+                content_type="application/json",
+            )
 
 
 class PostReadRecordView(PostGetObjectMixin, View):
