@@ -16,6 +16,11 @@ JustDoLog는 심플하고 강력한 블로깅 플랫폼입니다. WYSIWYG 지원
   - Django 5.1
   - django-allauth (소셜 로그인)
   - django-tinymce (텍스트 에디터)
+- **Frontend**
+  - utteranc.es (포스트 댓글)
+  ```bash
+  https://github.com/JustDoLog/JustDoLog-Comment를 저장소로 사용
+  ```
 - **Database**
   - PostgreSQL 15 (프로덕션)
   - SQLite (개발)
