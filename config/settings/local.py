@@ -9,10 +9,21 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 # Database
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": os.getenv("DB_ENGINE", "django.db.backends.postgresql"),
+        "NAME": os.getenv("DB_NAME", "justdolog"),
+        "USER": os.getenv("DB_USER", "justdolog"),
+        "PASSWORD": os.getenv("DB_PASSWORD", "justdolog"),
+        "HOST": os.getenv("DB_HOST", "db"),
+        "PORT": os.getenv("DB_PORT", "5432"),
+        "ATOMIC_REQUESTS": True,
+        "OPTIONS": {
+            "connect_timeout": 5,
+        },
     }
 }
+
+# Database Connection Pool
+CONN_MAX_AGE = 60  # 1분 동안 연결 유지
 
 # Email Backend for Development
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

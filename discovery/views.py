@@ -21,13 +21,8 @@ class TrendingPostsView(ListView):
 
     def get_queryset(self):
         period = self.request.GET.get("period", "day")
-        days = {
-            "day": 1,
-            "week": 7,
-            "month": 30,
-            "year": 365
-        }.get(period, 1)
-        
+        days = {"day": 1, "week": 7, "month": 30, "year": 365}.get(period, 1)
+
         return Post.objects.trending(days=days)
 
 
@@ -66,27 +61,29 @@ class RecentReadPostsView(LoginRequiredMixin, ListView):
 
 
 class PopularBloggersView(ListView):
-    template_name = 'discovery/popular_bloggers.html'
-    context_object_name = 'bloggers'
-    
+    template_name = "discovery/popular_bloggers.html"
+    context_object_name = "bloggers"
+
     def get_queryset(self):
         # 캐시 키 생성
-        cache_key = 'popular_bloggers'
+        cache_key = "popular_bloggers"
         queryset = cache.get(cache_key)
-        
+
         if queryset is None:
             # 기본 쿼리 실행
             queryset = list(Blog.objects.popular()[:10])  # list로 평가
-            
+
             # 결과 캐싱 (1시간)
             cache.set(cache_key, queryset, 60 * 60)
-        
+
         # 로그인한 사용자의 팔로잉 정보 처리
         if self.request.user.is_authenticated:
-            following_ids = set(Follow.objects.filter(
-                follower=self.request.user
-            ).values_list('following_id', flat=True))
-            
+            following_ids = set(
+                Follow.objects.filter(follower=self.request.user).values_list(
+                    "following_id", flat=True
+                )
+            )
+
             # 각 블로거의 팔로잉 상태를 미리 계산
             for blog in queryset:
                 blog.is_followed = blog.owner_id in following_ids
@@ -94,12 +91,12 @@ class PopularBloggersView(ListView):
             # 비로그인 사용자는 모두 False로 설정
             for blog in queryset:
                 blog.is_followed = False
-        
+
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['user_is_authenticated'] = self.request.user.is_authenticated
+        context["user_is_authenticated"] = self.request.user.is_authenticated
         return context
 
 
@@ -115,11 +112,11 @@ class SearchView(ListView):
             return Post.objects.none()
 
         # PostgreSQL FTS 사용 여부 확인
-        if settings.DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
-            search_query = SearchQuery(query, config="simple")
-            return Post.objects.published().filter(
-                search_vector=search_query
-            ).order_by("-created_at")
+        # if settings.DATABASES["default"]["ENGINE"] == "django.db.backends.postgresql":
+        #     search_query = SearchQuery(query, config="simple")
+        #     return Post.objects.published().filter(
+        #         search_vector=search_query
+        #     ).order_by("-created_at")
 
         return Post.objects.search(query).order_by("-created_at")
 
@@ -137,14 +134,13 @@ class FollowingPostsView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         # 현재 사용자가 팔로우하는 사용자들의 ID 목록을 가져옴
-        following_users = Follow.objects.filter(
-            follower=self.request.user
-        ).values_list('following', flat=True)
-        
+        following_users = Follow.objects.filter(follower=self.request.user).values_list(
+            "following", flat=True
+        )
+
         # 팔로우하는 사용자들의 게시글을 최신순으로 가져옴
         return Post.objects.filter(
-            blog__owner__in=following_users,
-            status="published"
+            blog__owner__in=following_users, status="published"
         ).order_by("-updated_at")
 
     def get_context_data(self, **kwargs):
@@ -163,10 +159,10 @@ class TaggedPostsView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        tag_name = self.kwargs.get('tag_name')
+        tag_name = self.kwargs.get("tag_name")
         return Post.objects.by_tag(tag_name)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['tag_name'] = self.kwargs.get('tag_name')
+        context["tag_name"] = self.kwargs.get("tag_name")
         return context
