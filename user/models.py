@@ -12,7 +12,7 @@ def validate_image_size(file):
     # 5MB 제한
     max_size = 5 * 1024 * 1024
     if file.size > max_size:
-        raise ValidationError('이미지 크기는 5MB를 초과할 수 없습니다.')
+        raise ValidationError("이미지 크기는 5MB를 초과할 수 없습니다.")
 
 
 def validate_image(file):
@@ -34,8 +34,8 @@ def validate_image(file):
 def validate_url(value):
     """URL 유효성 검사"""
     validator = URLValidator(
-        schemes=['http', 'https'],
-        message='올바른 URL을 입력해주세요. (예: https://example.com)'
+        schemes=["http", "https"],
+        message="올바른 URL을 입력해주세요. (예: https://example.com)",
     )
     validator(value)
 
@@ -62,27 +62,15 @@ class CustomUser(AbstractUser):
         null=True,
         blank=True,
         verbose_name="프로필 이미지",
-        validators=[validate_image]
+        validators=[validate_image],
     )
-    github_url = models.URLField(
-        max_length=200,
-        blank=True,
-        validators=[validate_url]
-    )
-    twitter_url = models.URLField(
-        max_length=200,
-        blank=True,
-        validators=[validate_url]
-    )
+    github_url = models.URLField(max_length=200, blank=True, validators=[validate_url])
+    twitter_url = models.URLField(max_length=200, blank=True, validators=[validate_url])
     facebook_url = models.URLField(
-        max_length=200,
-        blank=True,
-        validators=[validate_url]
+        max_length=200, blank=True, validators=[validate_url]
     )
     homepage_url = models.URLField(
-        max_length=200,
-        blank=True,
-        validators=[validate_url]
+        max_length=200, blank=True, validators=[validate_url]
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -93,7 +81,7 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.username
-    
+
     @property
     def get_profile_image(self):
         """프로필 이미지 URL 반환"""
@@ -108,8 +96,12 @@ class CustomUser(AbstractUser):
 
 
 class Follow(models.Model):
-    follower = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="following")
-    following = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="followers")
+    follower = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="following"
+    )
+    following = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="followers"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -117,12 +109,12 @@ class Follow(models.Model):
         verbose_name = "팔로잉"
         verbose_name_plural = "팔로잉"
         # 동일한 팔로잉 관계가 중복되지 않도록
-        unique_together = ('follower', 'following')
+        unique_together = ("follower", "following")
         # 자기 자신을 팔로우할 수 없도록 제약조건 추가 가능
         constraints = [
             models.CheckConstraint(
-                check=~models.Q(follower=models.F('following')),
-                name='no_self_following'
+                check=~models.Q(follower=models.F("following")),
+                name="no_self_following",
             )
         ]
 
@@ -136,4 +128,4 @@ class Follow(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.follower.username} follows {self.following.username}"    
+        return f"{self.follower.username} follows {self.following.username}"

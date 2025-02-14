@@ -8,24 +8,53 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('user', '0002_alter_customuser_options_and_more'),
+        ("user", "0002_alter_customuser_options_and_more"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Follow',
+            name="Follow",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('follower', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='following', to=settings.AUTH_USER_MODEL)),
-                ('following', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='followers', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "follower",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="following",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "following",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="followers",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': '팔로잉',
-                'verbose_name_plural': '팔로잉',
-                'constraints': [models.CheckConstraint(condition=models.Q(('follower', models.F('following')), _negated=True), name='no_self_following')],
-                'unique_together': {('follower', 'following')},
+                "verbose_name": "팔로잉",
+                "verbose_name_plural": "팔로잉",
+                "constraints": [
+                    models.CheckConstraint(
+                        condition=models.Q(
+                            ("follower", models.F("following")), _negated=True
+                        ),
+                        name="no_self_following",
+                    )
+                ],
+                "unique_together": {("follower", "following")},
             },
         ),
     ]

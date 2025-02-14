@@ -6,23 +6,23 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('blog', '0006_post_tags'),
+        ("blog", "0006_post_tags"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='blog',
-            name='total_likes',
+            model_name="blog",
+            name="total_likes",
             field=models.IntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='blog',
-            name='total_posts',
+            model_name="blog",
+            name="total_posts",
             field=models.IntegerField(default=0),
         ),
         migrations.AddField(
-            model_name='blog',
-            name='total_views',
+            model_name="blog",
+            name="total_views",
             field=models.IntegerField(default=0),
         ),
     ]

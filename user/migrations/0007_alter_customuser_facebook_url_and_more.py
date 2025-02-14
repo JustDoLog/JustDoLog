@@ -7,33 +7,39 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('user', '0006_remove_customuser_profile_image_url'),
+        ("user", "0006_remove_customuser_profile_image_url"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='customuser',
-            name='facebook_url',
+            model_name="customuser",
+            name="facebook_url",
             field=models.URLField(blank=True, validators=[user.models.validate_url]),
         ),
         migrations.AlterField(
-            model_name='customuser',
-            name='github_url',
+            model_name="customuser",
+            name="github_url",
             field=models.URLField(blank=True, validators=[user.models.validate_url]),
         ),
         migrations.AlterField(
-            model_name='customuser',
-            name='homepage_url',
+            model_name="customuser",
+            name="homepage_url",
             field=models.URLField(blank=True, validators=[user.models.validate_url]),
         ),
         migrations.AlterField(
-            model_name='customuser',
-            name='profile_image',
-            field=models.ImageField(blank=True, null=True, upload_to=user.models.profile_image_path, validators=[user.models.validate_image], verbose_name='프로필 이미지'),
+            model_name="customuser",
+            name="profile_image",
+            field=models.ImageField(
+                blank=True,
+                null=True,
+                upload_to=user.models.profile_image_path,
+                validators=[user.models.validate_image],
+                verbose_name="프로필 이미지",
+            ),
         ),
         migrations.AlterField(
-            model_name='customuser',
-            name='twitter_url',
+            model_name="customuser",
+            name="twitter_url",
             field=models.URLField(blank=True, validators=[user.models.validate_url]),
         ),
     ]

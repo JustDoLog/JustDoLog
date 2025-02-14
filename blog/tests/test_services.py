@@ -9,26 +9,23 @@ from freezegun import freeze_time
 
 User = get_user_model()
 
+
 class LikeServiceTests(TestCase):
     @freeze_time("2024-03-15 12:00:00")
     def setUp(self):
         self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.other_user = User.objects.create_user(
-            username='otheruser',
-            email='other@example.com',
-            password='otherpass123'
+            username="otheruser", email="other@example.com", password="otherpass123"
         )
         self.blog = self.user.blog
         self.post = Post.objects.create(
             blog=self.blog,
             author=self.user,
-            title='Test Post',
-            content='Test Content',
-            status='published'
+            title="Test Post",
+            content="Test Content",
+            status="published",
         )
 
     def tearDown(self):
@@ -51,14 +48,14 @@ class LikeServiceTests(TestCase):
     def test_get_like_status(self):
         """좋아요 상태 확인 테스트"""
         self.assertFalse(LikeService.get_like_status(self.other_user, self.post))
-        
+
         self.post.liked_by.add(self.other_user)
         self.assertTrue(LikeService.get_like_status(self.other_user, self.post))
 
     def test_get_likes_count(self):
         """좋아요 수 조회 테스트"""
         self.assertEqual(LikeService.get_likes_count(self.post), 0)
-        
+
         # LikeService를 통해 좋아요 추가
         LikeService.toggle_like(self.other_user, self.post)
         self.assertEqual(LikeService.get_likes_count(self.post), 1)
@@ -68,22 +65,18 @@ class ReadServiceTests(TestCase):
     @freeze_time("2024-03-15 12:00:00")
     def setUp(self):
         self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.other_user = User.objects.create_user(
-            username='otheruser',
-            email='other@example.com',
-            password='otherpass123'
+            username="otheruser", email="other@example.com", password="otherpass123"
         )
         self.blog = self.user.blog
         self.post = Post.objects.create(
             blog=self.blog,
             author=self.user,
-            title='Test Post',
-            content='Test Content',
-            status='published'
+            title="Test Post",
+            content="Test Content",
+            status="published",
         )
 
     def tearDown(self):
@@ -93,7 +86,9 @@ class ReadServiceTests(TestCase):
         """조회 기록 테스트"""
         # 다른 사용자가 조회
         ReadService.record_read(self.other_user, self.post)
-        self.assertTrue(PostRead.objects.filter(user=self.other_user, post=self.post).exists())
+        self.assertTrue(
+            PostRead.objects.filter(user=self.other_user, post=self.post).exists()
+        )
         self.assertEqual(self.post.views, 1)
 
         # 작성자가 조회 (조회수 증가하지 않음)
@@ -103,7 +98,7 @@ class ReadServiceTests(TestCase):
     def test_get_views_count(self):
         """조회수 확인 테스트"""
         self.assertEqual(ReadService.get_views_count(self.post), 0)
-        
+
         # ReadService를 통해 조회수 증가
         ReadService.record_read(self.other_user, self.post)
         self.assertEqual(ReadService.get_views_count(self.post), 1)
@@ -111,7 +106,7 @@ class ReadServiceTests(TestCase):
     def test_get_read_status(self):
         """조회 여부 확인 테스트"""
         self.assertFalse(ReadService.get_read_status(self.other_user, self.post))
-        
+
         PostRead.objects.create(user=self.other_user, post=self.post)
         self.assertTrue(ReadService.get_read_status(self.other_user, self.post))
 
@@ -120,29 +115,25 @@ class PostServiceTests(TestCase):
     @freeze_time("2024-03-15 12:00:00")
     def setUp(self):
         self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.other_user = User.objects.create_user(
-            username='otheruser',
-            email='other@example.com',
-            password='otherpass123'
+            username="otheruser", email="other@example.com", password="otherpass123"
         )
         self.blog = self.user.blog
         self.post = Post.objects.create(
             blog=self.blog,
             author=self.user,
-            title='Test Post',
-            content='Test Content',
-            status='published'
+            title="Test Post",
+            content="Test Content",
+            status="published",
         )
         self.draft_post = Post.objects.create(
             blog=self.blog,
             author=self.user,
-            title='Draft Post',
-            content='Draft Content',
-            status='draft'
+            title="Draft Post",
+            content="Draft Content",
+            status="draft",
         )
 
     def test_get_user_posts(self):
@@ -164,18 +155,14 @@ class PostServiceTests(TestCase):
 
         # draft 게시글 (작성자)
         post = PostService.get_post_detail(
-            self.user.username, 
-            self.draft_post.slug,
-            user=self.user
+            self.user.username, self.draft_post.slug, user=self.user
         )
         self.assertEqual(post, self.draft_post)
 
         # draft 게시글 (다른 사용자)
         with self.assertRaises(Post.DoesNotExist):
             PostService.get_post_detail(
-                self.user.username,
-                self.draft_post.slug,
-                user=self.other_user
+                self.user.username, self.draft_post.slug, user=self.other_user
             )
 
     def test_create_post(self):
@@ -185,7 +172,7 @@ class PostServiceTests(TestCase):
             title="New Post",
             content="New Content",
             status="published",
-            tags=["tag1", "tag2"]
+            tags=["tag1", "tag2"],
         )
         self.assertEqual(post.title, "New Post")
         self.assertEqual(post.content, "New Content")
@@ -199,9 +186,9 @@ class PostServiceTests(TestCase):
             title="Updated Title",
             content="Updated Content",
             status="draft",
-            tags=["tag3"]
+            tags=["tag3"],
         )
         self.assertEqual(updated_post.title, "Updated Title")
         self.assertEqual(updated_post.content, "Updated Content")
         self.assertEqual(updated_post.status, "draft")
-        self.assertEqual(list(updated_post.tags.names()), ["tag3"]) 
+        self.assertEqual(list(updated_post.tags.names()), ["tag3"])

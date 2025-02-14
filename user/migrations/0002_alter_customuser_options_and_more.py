@@ -7,17 +7,22 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('user', '0001_initial'),
+        ("user", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='customuser',
-            options={'verbose_name': '사용자', 'verbose_name_plural': '사용자들'},
+            name="customuser",
+            options={"verbose_name": "사용자", "verbose_name_plural": "사용자들"},
         ),
         migrations.AlterField(
-            model_name='customuser',
-            name='profile_image',
-            field=models.ImageField(blank=True, null=True, upload_to=user.models.profile_image_path, verbose_name='프로필 이미지'),
+            model_name="customuser",
+            name="profile_image",
+            field=models.ImageField(
+                blank=True,
+                null=True,
+                upload_to=user.models.profile_image_path,
+                verbose_name="프로필 이미지",
+            ),
         ),
     ]

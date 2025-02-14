@@ -9,18 +9,20 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('blog', '0002_alter_post_content'),
+        ("blog", "0002_alter_post_content"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='post',
-            name='search_vector',
+            model_name="post",
+            name="search_vector",
             field=django.contrib.postgres.search.SearchVectorField(null=True),
         ),
         migrations.AddIndex(
-            model_name='post',
-            index=django.contrib.postgres.indexes.GinIndex(fields=['search_vector'], name='post_search_vector_idx'),
+            model_name="post",
+            index=django.contrib.postgres.indexes.GinIndex(
+                fields=["search_vector"], name="post_search_vector_idx"
+            ),
         ),
     ]

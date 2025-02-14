@@ -8,50 +8,96 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('blog', '0003_post_search_vector_post_post_search_vector_idx'),
+        ("blog", "0003_post_search_vector_post_post_search_vector_idx"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='post',
-            options={'ordering': ['-created_at']},
+            name="post",
+            options={"ordering": ["-created_at"]},
         ),
         migrations.CreateModel(
-            name='PostLike',
+            name="PostLike",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('post', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='blog.post')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "post",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="blog.post"
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created_at'],
-                'unique_together': {('user', 'post')},
+                "ordering": ["-created_at"],
+                "unique_together": {("user", "post")},
             },
         ),
         migrations.AddField(
-            model_name='post',
-            name='liked_by',
-            field=models.ManyToManyField(related_name='liked_posts', through='blog.PostLike', to=settings.AUTH_USER_MODEL),
+            model_name="post",
+            name="liked_by",
+            field=models.ManyToManyField(
+                related_name="liked_posts",
+                through="blog.PostLike",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
         migrations.CreateModel(
-            name='PostRead',
+            name="PostRead",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('updated_at', models.DateTimeField(auto_now=True)),
-                ('post', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='blog.post')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                ("updated_at", models.DateTimeField(auto_now=True)),
+                (
+                    "post",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="blog.post"
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-updated_at'],
-                'unique_together': {('user', 'post')},
+                "ordering": ["-updated_at"],
+                "unique_together": {("user", "post")},
             },
         ),
         migrations.AddField(
-            model_name='post',
-            name='read_by',
-            field=models.ManyToManyField(related_name='read_posts', through='blog.PostRead', to=settings.AUTH_USER_MODEL),
+            model_name="post",
+            name="read_by",
+            field=models.ManyToManyField(
+                related_name="read_posts",
+                through="blog.PostRead",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

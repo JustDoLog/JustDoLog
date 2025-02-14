@@ -9,14 +9,13 @@ from freezegun import freeze_time
 
 User = get_user_model()
 
+
 class BlogModelTest(TestCase):
     @freeze_time("2024-03-15 12:00:00")
     def setUp(self):
         """테스트 데이터 설정"""
         self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.blog = self.user.blog  # signal에 의해 자동 생성됨
 
@@ -25,18 +24,16 @@ class BlogModelTest(TestCase):
         """새 사용자 생성 시 Blog 자동 생성 테스트"""
         # 새로운 사용자 생성
         new_user = User.objects.create_user(
-            username='newuser',
-            email='new@example.com',
-            password='newpass123'
+            username="newuser", email="new@example.com", password="newpass123"
         )
 
         # Blog 인스턴스가 자동으로 생성되었는지 확인
-        self.assertTrue(hasattr(new_user, 'blog'))
+        self.assertTrue(hasattr(new_user, "blog"))
         self.assertIsInstance(new_user.blog, Blog)
-        
+
         # Blog의 owner가 올바르게 설정되었는지 확인
         self.assertEqual(new_user.blog.owner, new_user)
-        
+
         # 기본값 확인
         self.assertEqual(new_user.blog.title, f"Just Do {new_user.username}'s Blog")
         self.assertEqual(new_user.blog.description, "")
@@ -45,7 +42,7 @@ class BlogModelTest(TestCase):
     def test_blog_fields(self):
         """Blog 필드 및 str 메소드 테스트"""
         initial_time = timezone.now()
-        
+
         # 필드 값 업데이트
         self.blog.title = "Test Blog"
         self.blog.description = "Test Description"
@@ -56,7 +53,7 @@ class BlogModelTest(TestCase):
         self.assertEqual(self.blog.description, "Test Description")
         self.assertEqual(self.blog.created_at, initial_time)
         self.assertEqual(self.blog.updated_at, initial_time)
-        
+
         # str 메소드 검증
         self.assertEqual(str(self.blog), "Test Blog")
 
@@ -76,21 +73,21 @@ class BlogModelTest(TestCase):
             blog=self.blog,
             title="Post 1",
             content="Content 1",
-            status="published"
+            status="published",
         )
         post2 = Post.objects.create(
             author=self.user,
             blog=self.blog,
             title="Post 2",
             content="Content 2",
-            status="published"
+            status="published",
         )
         post3 = Post.objects.create(
             author=self.user,
             blog=self.blog,
             title="Post 3",
             content="Content 3",
-            status="draft"  # 비공개 게시글
+            status="draft",  # 비공개 게시글
         )
 
         # 태그 추가
@@ -100,22 +97,22 @@ class BlogModelTest(TestCase):
 
         # get_tags_with_count 결과 확인
         tags_with_count = self.blog.get_tags_with_count()
-        
+
         # 태그별 게시글 수 확인 (draft 게시글 제외)
         tag_counts = {tag.name: tag.posts_count for tag in tags_with_count}
-        self.assertEqual(tag_counts['python'], 2)  # published 상태의 게시글만 카운트
-        self.assertEqual(tag_counts['django'], 1)
-        self.assertEqual(tag_counts['testing'], 1)
+        self.assertEqual(tag_counts["python"], 2)  # published 상태의 게시글만 카운트
+        self.assertEqual(tag_counts["django"], 1)
+        self.assertEqual(tag_counts["testing"], 1)
 
         # 정렬 순서 확인 (게시글 수 내림차순, 같은 경우 이름 오름차순)
         tag_names = [tag.name for tag in tags_with_count]
-        self.assertEqual(tag_names, ['python', 'django', 'testing'])
+        self.assertEqual(tag_names, ["python", "django", "testing"])
 
     def test_blog_owner_cascade_delete(self):
         """사용자 삭제 시 블로그도 함께 삭제되는지 테스트"""
         blog_id = self.blog.id
         self.user.delete()
-        
+
         # 블로그가 삭제되었는지 확인
         self.assertFalse(Blog.objects.filter(id=blog_id).exists())
 
@@ -127,14 +124,14 @@ class BlogModelTest(TestCase):
             blog=self.blog,
             title="Post 1",
             content="Content 1",
-            status="published"
+            status="published",
         )
         post2 = Post.objects.create(
             author=self.user,
             blog=self.blog,
             title="Post 2",
             content="Content 2",
-            status="draft"
+            status="draft",
         )
 
         # related_name을 통한 역참조 확인
@@ -148,13 +145,12 @@ class BlogModelTest(TestCase):
         self.assertEqual(published_posts.count(), 1)
         self.assertEqual(draft_posts.count(), 1)
 
+
 class PostModelTest(TestCase):
     def setUp(self):
         """테스트 데이터 설정"""
         self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.blog = self.user.blog
 
@@ -165,7 +161,7 @@ class PostModelTest(TestCase):
             author=self.user,
             blog=self.blog,
             title="Sample Title",
-            content="Sample Content"
+            content="Sample Content",
         )
         self.assertEqual(post.slug, "sample-title")
 
@@ -174,7 +170,7 @@ class PostModelTest(TestCase):
             author=self.user,
             blog=self.blog,
             title="Sample Title",
-            content="Another Content"
+            content="Another Content",
         )
         self.assertEqual(post2.slug, "sample-title-1")
 
@@ -183,16 +179,13 @@ class PostModelTest(TestCase):
             author=self.user,
             blog=self.blog,
             title="Sample Title",
-            content="Yet Another Content"
+            content="Yet Another Content",
         )
         self.assertEqual(post3.slug, "sample-title-2")
 
         # 한글 제목 테스트
         post4 = Post.objects.create(
-            author=self.user,
-            blog=self.blog,
-            title="테스트 제목",
-            content="테스트 내용"
+            author=self.user, blog=self.blog, title="테스트 제목", content="테스트 내용"
         )
         self.assertEqual(post4.slug, "테스트-제목")
 
@@ -203,7 +196,7 @@ class PostModelTest(TestCase):
             author=self.user,
             blog=self.blog,
             title="Original Title",
-            content="Original Content"
+            content="Original Content",
         )
         original_slug = post.slug
 
@@ -222,7 +215,7 @@ class PostModelTest(TestCase):
             author=self.user,
             blog=self.blog,
             title="Another Title",
-            content="Another Content"
+            content="Another Content",
         )
         another_post.title = "Updated Title"
         another_post.save()
@@ -235,7 +228,7 @@ class PostModelTest(TestCase):
             author=self.user,
             blog=self.blog,
             title="Post with Image",
-            content='<p>Some text</p><img src="https://example.com/image.jpg"><p>More text</p>'
+            content='<p>Some text</p><img src="https://example.com/image.jpg"><p>More text</p>',
         )
         self.assertEqual(post_with_image.thumbnail, "https://example.com/image.jpg")
 
@@ -244,17 +237,21 @@ class PostModelTest(TestCase):
             author=self.user,
             blog=self.blog,
             title="Post without Image",
-            content='<p>Just text content</p>'
+            content="<p>Just text content</p>",
         )
         self.assertIsNone(post_without_image.thumbnail)
 
         # content 업데이트로 이미지 추가
-        post_without_image.content = '<img src="https://example.com/new-image.jpg"><p>Updated content</p>'
+        post_without_image.content = (
+            '<img src="https://example.com/new-image.jpg"><p>Updated content</p>'
+        )
         post_without_image.save()
-        self.assertEqual(post_without_image.thumbnail, "https://example.com/new-image.jpg")
+        self.assertEqual(
+            post_without_image.thumbnail, "https://example.com/new-image.jpg"
+        )
 
         # content 업데이트로 이미지 제거
-        post_with_image.content = '<p>No more images</p>'
+        post_with_image.content = "<p>No more images</p>"
         post_with_image.save()
         self.assertIsNone(post_with_image.thumbnail)
 
@@ -262,10 +259,7 @@ class PostModelTest(TestCase):
         """Post 기본 필드 및 관계 테스트"""
         # 기본 포스트 생성
         post = Post.objects.create(
-            author=self.user,
-            blog=self.blog,
-            title="Test Post",
-            content="Test Content"
+            author=self.user, blog=self.blog, title="Test Post", content="Test Content"
         )
 
         # 기본값 검증
@@ -290,10 +284,7 @@ class PostModelTest(TestCase):
     def test_post_status_transitions(self):
         """Post 상태 변경 테스트"""
         post = Post.objects.create(
-            author=self.user,
-            blog=self.blog,
-            title="Test Post",
-            content="Test Content"
+            author=self.user, blog=self.blog, title="Test Post", content="Test Content"
         )
 
         # draft -> published
@@ -314,10 +305,7 @@ class PostModelTest(TestCase):
     def test_post_cascade_delete(self):
         """연관 객체 삭제 시 Post 삭제 테스트"""
         post = Post.objects.create(
-            author=self.user,
-            blog=self.blog,
-            title="Test Post",
-            content="Test Content"
+            author=self.user, blog=self.blog, title="Test Post", content="Test Content"
         )
         post_id = post.id
 
@@ -327,15 +315,13 @@ class PostModelTest(TestCase):
 
         # 다른 사용자의 포스트 생성
         other_user = User.objects.create_user(
-            username='otheruser',
-            email='other@example.com',
-            password='pass123'
+            username="otheruser", email="other@example.com", password="pass123"
         )
         other_post = Post.objects.create(
             author=other_user,
             blog=other_user.blog,
             title="Other Post",
-            content="Other Content"
+            content="Other Content",
         )
         other_post_id = other_post.id
 
@@ -343,32 +329,26 @@ class PostModelTest(TestCase):
         other_user.blog.delete()
         self.assertFalse(Post.objects.filter(id=other_post_id).exists())
 
+
 class PostLikeModelTest(TestCase):
     def setUp(self):
         """테스트 데이터 설정"""
         self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.other_user = User.objects.create_user(
-            username='otheruser',
-            email='other@example.com',
-            password='otherpass123'
+            username="otheruser", email="other@example.com", password="otherpass123"
         )
         self.blog = self.user.blog
         self.post = Post.objects.create(
-            author=self.user,
-            blog=self.blog,
-            title="Test Post",
-            content="Test Content"
+            author=self.user, blog=self.blog, title="Test Post", content="Test Content"
         )
 
     def test_post_like_creation(self):
         """정상적인 좋아요 생성 테스트"""
         # 좋아요 생성
         like = PostLike.objects.create(user=self.user, post=self.post)
-        
+
         # 기본 필드 검증
         self.assertEqual(like.user, self.user)
         self.assertEqual(like.post, self.post)
@@ -409,10 +389,7 @@ class PostLikeModelTest(TestCase):
 
         # 새 포스트와 좋아요 생성
         new_post = Post.objects.create(
-            author=self.user,
-            blog=self.blog,
-            title="New Post",
-            content="New Content"
+            author=self.user, blog=self.blog, title="New Post", content="New Content"
         )
         new_like = PostLike.objects.create(user=self.user, post=new_post)
         new_like_id = new_like.id
@@ -426,21 +403,14 @@ class PostReadModelTest(TestCase):
     def setUp(self):
         """테스트 데이터 설정"""
         self.user = User.objects.create_user(
-            username='testuser',
-            email='test@example.com',
-            password='testpass123'
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.other_user = User.objects.create_user(
-            username='otheruser',
-            email='other@example.com',
-            password='otherpass123'
+            username="otheruser", email="other@example.com", password="otherpass123"
         )
         self.blog = self.user.blog
         self.post = Post.objects.create(
-            author=self.user,
-            blog=self.blog,
-            title="Test Post",
-            content="Test Content"
+            author=self.user, blog=self.blog, title="Test Post", content="Test Content"
         )
 
     def test_post_read_creation(self):
@@ -451,7 +421,7 @@ class PostReadModelTest(TestCase):
         self.assertEqual(read.post, self.post)
         expected_str = f"{self.user.username} read {self.post.title}"
         self.assertEqual(str(read), expected_str)
-        
+
         # created_at과 updated_at이 거의 동일한 시점에 생성되었는지 확인
         time_difference = abs(read.updated_at.timestamp() - read.created_at.timestamp())
         self.assertLess(time_difference, 1)  # 1초 미만의 차이
@@ -484,7 +454,7 @@ class PostReadModelTest(TestCase):
 
         # 시간이 지난 후 업데이트
         read.save()  # 단순 저장만으로도 updated_at이 갱신되어야 함
-        
+
         # updated_at 갱신 확인
         read.refresh_from_db()
         self.assertGreater(read.updated_at, original_updated_at)
@@ -501,10 +471,7 @@ class PostReadModelTest(TestCase):
 
         # 새 포스트와 읽음 기록 생성
         new_post = Post.objects.create(
-            author=self.user,
-            blog=self.blog,
-            title="New Post",
-            content="New Content"
+            author=self.user, blog=self.blog, title="New Post", content="New Content"
         )
         new_read = PostRead.objects.create(user=self.user, post=new_post)
         new_read_id = new_read.id

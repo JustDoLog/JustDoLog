@@ -6,36 +6,36 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('user', '0004_customuser_profile_image_url'),
+        ("user", "0004_customuser_profile_image_url"),
     ]
 
     operations = [
         migrations.RenameField(
-            model_name='customuser',
-            old_name='facebook',
-            new_name='facebook_url',
+            model_name="customuser",
+            old_name="facebook",
+            new_name="facebook_url",
         ),
         migrations.RenameField(
-            model_name='customuser',
-            old_name='github',
-            new_name='github_url',
+            model_name="customuser",
+            old_name="github",
+            new_name="github_url",
         ),
         migrations.RenameField(
-            model_name='customuser',
-            old_name='homepage',
-            new_name='homepage_url',
+            model_name="customuser",
+            old_name="homepage",
+            new_name="homepage_url",
         ),
         migrations.RenameField(
-            model_name='customuser',
-            old_name='twitter',
-            new_name='twitter_url',
+            model_name="customuser",
+            old_name="twitter",
+            new_name="twitter_url",
         ),
         migrations.RemoveField(
-            model_name='customuser',
-            name='bio',
+            model_name="customuser",
+            name="bio",
         ),
         migrations.RemoveField(
-            model_name='customuser',
-            name='nickname',
+            model_name="customuser",
+            name="nickname",
         ),
     ]
