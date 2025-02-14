@@ -1,5 +1,6 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
+from . import api
 
 urlpatterns = [
     path("trending/", views.TrendingPostsView.as_view(), name="trending_day"),
@@ -14,4 +15,13 @@ urlpatterns = [
     ),
     path("search/", views.SearchView.as_view(), name="search"),
     path("tags/<str:tag_name>/", views.TaggedPostsView.as_view(), name="tagged_posts"),
+]
+
+urlpatterns_api_v1 = [
+    path("recent", api.recent_posts, name="api_recent_posts"),
+]
+
+
+urlpatterns += [
+    path("api/", include((urlpatterns_api_v1, "api-v1"))),
 ]

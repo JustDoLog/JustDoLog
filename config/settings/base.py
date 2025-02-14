@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django.contrib.sites",
+    "rest_framework",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -156,7 +157,7 @@ ACCOUNT_EMAIL_VERIFICATION = "none"  # 이메일 검증 과정이 필요한가?
 LOGIN_REDIRECT_URL = "/"  # 로그인 후 리다이렉트 될 URL
 LOGOUT_REDIRECT_URL = "/"  # 로그아웃 후 리다이렉트 될 URL
 SOCIALACCOUNT_LOGIN_ON_GET = True  # 소셜 로그인 중간 페이지 건너뛰기
-ACCOUNT_LOGIN_METHODS = {'email'}  # 로그인 인증 방식을 이메일로 설정
+ACCOUNT_LOGIN_METHODS = {"email"}  # 로그인 인증 방식을 이메일로 설정
 ACCOUNT_UNIQUE_EMAIL = True  # 이메일 중복 방지
 SOCIALACCOUNT_AUTO_SIGNUP = True  # 소셜 계정으로 로그인 시 자동 회원가입
 
@@ -208,7 +209,7 @@ TINYMCE_DEFAULT_CONFIG = {
         {"text": "HTML/XML", "value": "language-markup"},
         {"text": "CSS", "value": "language-css"},
         {"text": "Bash", "value": "language-bash"},
-        {"text": "JSON", "value": "language-json"}
+        {"text": "JSON", "value": "language-json"},
     ],
     "codesample_global_prismjs": True,
     # 이미지 업로드 관련 설정
@@ -295,20 +296,20 @@ globals().update(MINIO_SETTINGS)
 
 # Cache settings
 CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'redis://redis:6379/0',
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": "redis://redis:6379/0",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
     }
 }
 
 # Cache timeouts
 POST_CACHE_TTL = 60 * 15  # 15 minutes
 BLOG_CACHE_TTL = 60 * 30  # 30 minutes
-LIKES_CACHE_TTL = 60 * 5   # 5 minutes
-VIEWS_CACHE_TTL = 60 * 5   # 5 minutes
+LIKES_CACHE_TTL = 60 * 5  # 5 minutes
+VIEWS_CACHE_TTL = 60 * 5  # 5 minutes
 
 # Cache key prefix
 CACHE_KEY_PREFIX = "jdl"
@@ -316,3 +317,15 @@ CACHE_KEY_PREFIX = "jdl"
 # Session
 SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
+
+# REST framework settings
+REST_FRAMEWORK = {
+    # https://www.django-rest-framework.org/api-guide/renderers/
+    "DEFAULT_RENDERER_CLASSES": [
+        # 디폴트
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "PAGE_SIZE": 10,
+}
